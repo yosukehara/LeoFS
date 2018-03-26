@@ -1,0 +1,1220 @@
+
+<!DOCTYPE html>
+<html class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="LeoProject makes LeoFS, which is an open source distributed object storage system and a highly available, distributed, eventually consistent storage system. LeoFS is supporting the following features:Multi-protocol Support - S3-API, REST-API and NFS v3, Large Object Support, Multi Data Center Replication and others.">
+      
+      
+      
+        <meta name="author" content="LeoProject">
+      
+      
+        <link rel="shortcut icon" href="../../../favicon.ico">
+      
+      <meta name="generator" content="mkdocs-0.17.2, mkdocs-material-1.5.4">
+    
+    
+      
+        <title>Systemd Services - LeoFS Documentation</title>
+      
+    
+    
+      <script src="../../../assets/javascripts/modernizr-56ade86843.js"></script>
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/application-b1a1975878.css">
+      
+    
+    
+      
+        
+        
+        
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+        <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
+      
+      <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
+    
+    
+  </head>
+  
+  
+  
+  
+    <body>
+  
+    <svg class="md-svg">
+      <defs>
+        
+        
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448" viewBox="0 0 416 448" id="github"><path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19T128 352t-18.125-8.5-10.75-19T96 304t3.125-20.5 10.75-19T128 256t18.125 8.5 10.75 19T160 304zm160 0q0 10-3.125 20.5t-10.75 19T288 352t-18.125-8.5-10.75-19T256 304t3.125-20.5 10.75-19T288 256t18.125 8.5 10.75 19T320 304zm40 0q0-30-17.25-51T296 232q-10.25 0-48.75 5.25Q229.5 240 208 240t-39.25-2.75Q130.75 232 120 232q-29.5 0-46.75 21T56 304q0 22 8 38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0 37.25-1.75t35-7.375 30.5-15 20.25-25.75T360 304zm56-44q0 51.75-15.25 82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5T212 416q-19.5 0-35.5-.75t-36.875-3.125-38.125-7.5-34.25-12.875T37 371.5t-21.5-28.75Q0 312 0 260q0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25 30.875Q171.5 96 212 96q37 0 70 8 26.25-20.5 46.75-30.25T376 64q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34 99.5z"/></svg>
+        
+      </defs>
+    </svg>
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="drawer">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
+    <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid">
+    <div class="md-flex">
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <a href="../../.." title="LeoFS Documentation" class="md-icon md-icon--home md-header-nav__button">
+          </a>
+        
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--menu md-header-nav__button" for="drawer"></label>
+      </div>
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <span class="md-flex__ellipsis md-header-nav__title">
+          
+            
+              
+                <span class="md-header-nav__parent">
+                  For Administrators
+                </span>
+              
+                <span class="md-header-nav__parent">
+                  System Operations
+                </span>
+              
+            
+            Systemd Services
+          
+        </span>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <label class="md-icon md-icon--search md-header-nav__button" for="search"></label>
+          
+<div class="md-search" data-md-component="search">
+  <div class="md-search__overlay"></div>
+  <div class="md-search__inner">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" required placeholder="Search" accesskey="s" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query">
+      <label class="md-icon md-search__icon" for="search"></label>
+      <button type="reset" class="md-icon md-search__icon" data-md-component="reset">close</button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="result">
+          <div class="md-search-result__meta" data-md-lang-result-none="No matching documents" data-md-lang-result-one="1 matching document" data-md-lang-result-other="# matching documents">
+            Type to start searching
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <div class="md-header-nav__source">
+          
+            
+
+
+  
+
+
+  <a href="https://github.com/leo-project/leofs/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+          
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+    
+    <div class="md-container">
+      
+      
+      <main class="md-main">
+        <div class="md-main__inner md-grid" data-md-component="container">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="drawer">
+    
+      <i class="md-icon md-icon--home md-nav__button"></i>
+    
+    LeoFS Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/leo-project/leofs/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../.." title="Introduction" class="md-nav__link">
+      Introduction
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../../whats_new/" title="What's New?" class="md-nav__link">
+      What's New?
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3">
+    
+    <label class="md-nav__link" for="nav-3">
+      Getting Started
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-3">
+        Getting Started
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../installation/quick/" title="Quick Installation and Setup" class="md-nav__link">
+      Quick Installation and Setup
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../installation/cluster/" title="Building a LeoFS' cluster with Ansible" class="md-nav__link">
+      Building a LeoFS' cluster with Ansible
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4">
+    
+    <label class="md-nav__link" for="nav-4">
+      Concept and Architecture
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-4">
+        Concept and Architecture
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../architecture/README/" title="LeoFS' Architecture" class="md-nav__link">
+      LeoFS' Architecture
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../architecture/leo_gateway/" title="LeoGateway's Architecture" class="md-nav__link">
+      LeoGateway's Architecture
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../architecture/leo_storage/" title="LeoStorage's Architecture" class="md-nav__link">
+      LeoStorage's Architecture
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../architecture/leo_manager/" title="LeoManager's Architecture" class="md-nav__link">
+      LeoManager's Architecture
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5" checked>
+    
+    <label class="md-nav__link" for="nav-5">
+      For Administrators
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
+        For Administrators
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5-1" type="checkbox" id="nav-5-1">
+    
+    <label class="md-nav__link" for="nav-5-1">
+      Setup
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-5-1">
+        Setup
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../setup/planning_for_production/" title="Planning for Production" class="md-nav__link">
+      Planning for Production
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../setup/supported_platforms/" title="Supported Platforms" class="md-nav__link">
+      Supported Platforms
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../setup/hardware_requirements/" title="Hardware Requirements" class="md-nav__link">
+      Hardware Requirements
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../setup/network_config/" title="Network Configurations" class="md-nav__link">
+      Network Configurations
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../system_admin/load_balancing/" title="Load Balancing Configuration" class="md-nav__link">
+      Load Balancing Configuration
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5-2" type="checkbox" id="nav-5-2">
+    
+    <label class="md-nav__link" for="nav-5-2">
+      Settings
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-5-2">
+        Settings
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../settings/cluster/" title="Cluster Settings" class="md-nav__link">
+      Cluster Settings
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../settings/environment_config/" title="Environment Configuration" class="md-nav__link">
+      Environment Configuration
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../settings/leo_manager/" title="LeoManager Settings" class="md-nav__link">
+      LeoManager Settings
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../settings/leo_storage/" title="LeoStorage Settings" class="md-nav__link">
+      LeoStorage Settings
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../settings/leo_gateway/" title="LeoGateway Settings" class="md-nav__link">
+      LeoGateway Settings
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5-3" type="checkbox" id="nav-5-3">
+    
+    <label class="md-nav__link" for="nav-5-3">
+      Interface
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-5-3">
+        Interface
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../protocols/s3/" title="S3-API" class="md-nav__link">
+      S3-API
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../protocols/rest/" title="REST-API" class="md-nav__link">
+      REST-API
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../protocols/nfs_v3/" title="NFS v3" class="md-nav__link">
+      NFS v3
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5-4" type="checkbox" id="nav-5-4" checked>
+    
+    <label class="md-nav__link" for="nav-5-4">
+      System Operations
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-5-4">
+        System Operations
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../flow/" title="Operation Flow" class="md-nav__link">
+      Operation Flow
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="toc">
+        Systemd Services
+      </label>
+    
+    <a href="./" title="Systemd Services" class="md-nav__link md-nav__link--active">
+      Systemd Services
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" title="Requirements" class="md-nav__link">
+    Requirements
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#switching-to-systemd-services" title="Switching to systemd services" class="md-nav__link">
+    Switching to systemd services
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caveats-when-using-systemd-services" title="Caveats when using systemd services" class="md-nav__link">
+    Caveats when using systemd services
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mixing-old-and-new-way-to-launch-nodes" title="Mixing old and new way to launch nodes" class="md-nav__link">
+    Mixing old and new way to launch nodes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-nodes-as-user-other-than-leofs" title="Running nodes as user other than leofs" class="md-nav__link">
+    Running nodes as user other than leofs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#long-shutdown-times" title="Long shutdown times" class="md-nav__link">
+    Long shutdown times
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-leofs-nodes-on-systems-running-other-erlang-software" title="Running LeoFS nodes on systems running other Erlang software" class="md-nav__link">
+    Running LeoFS nodes on systems running other Erlang software
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../s3/" title="S3-API related Operations" class="md-nav__link">
+      S3-API related Operations
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../cluster/" title="Cluster Operations" class="md-nav__link">
+      Cluster Operations
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../data/" title="Data Operations" class="md-nav__link">
+      Data Operations
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../multi_dc_replication/" title="Multi Data Center Replication" class="md-nav__link">
+      Multi Data Center Replication
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5-5" type="checkbox" id="nav-5-5">
+    
+    <label class="md-nav__link" for="nav-5-5">
+      System Administration
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-5-5">
+        System Administration
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../system_admin/log_management/" title="Log Management" class="md-nav__link">
+      Log Management
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../system_admin/persistent_configuration/" title="Persistent Configuration" class="md-nav__link">
+      Persistent Configuration
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../system_admin/monitoring/" title="System Monitoring" class="md-nav__link">
+      System Monitoring
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../system_admin/migration/" title="System Migration" class="md-nav__link">
+      System Migration
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../system_admin/integration/" title="System Integration" class="md-nav__link">
+      System Integration
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../system_admin/multiple_nodes/" title="Multiple Node Instances" class="md-nav__link">
+      Multiple Node Instances
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../index_of_commands/" title="Index of LeoFS' Commands" class="md-nav__link">
+      Index of LeoFS' Commands
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../../benchmark/README/" title="Benchmark" class="md-nav__link">
+      Benchmark
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-7" type="checkbox" id="nav-7">
+    
+    <label class="md-nav__link" for="nav-7">
+      FAQ
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-7">
+        FAQ
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../faq/fundamentals/" title="LeoFS Fundamentals" class="md-nav__link">
+      LeoFS Fundamentals
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../faq/limits/" title="LeoFS Limits" class="md-nav__link">
+      LeoFS Limits
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../faq/administration/" title="LeoFS Administration" class="md-nav__link">
+      LeoFS Administration
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../faq/client/" title="LeoFS Clients" class="md-nav__link">
+      LeoFS Clients
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../../production_checklist/README/" title="Production Checklist" class="md-nav__link">
+      Production Checklist
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" title="Requirements" class="md-nav__link">
+    Requirements
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#switching-to-systemd-services" title="Switching to systemd services" class="md-nav__link">
+    Switching to systemd services
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caveats-when-using-systemd-services" title="Caveats when using systemd services" class="md-nav__link">
+    Caveats when using systemd services
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mixing-old-and-new-way-to-launch-nodes" title="Mixing old and new way to launch nodes" class="md-nav__link">
+    Mixing old and new way to launch nodes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-nodes-as-user-other-than-leofs" title="Running nodes as user other than leofs" class="md-nav__link">
+    Running nodes as user other than leofs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#long-shutdown-times" title="Long shutdown times" class="md-nav__link">
+    Long shutdown times
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-leofs-nodes-on-systems-running-other-erlang-software" title="Running LeoFS nodes on systems running other Erlang software" class="md-nav__link">
+    Running LeoFS nodes on systems running other Erlang software
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/leo-project/leofs/edit/master/docs/admin/system_operations/systemd.md" title="Edit this page" class="md-icon md-content__icon">edit</a>
+                
+                
+                <h1 id="systemd-services">Systemd Services<a class="headerlink" href="#systemd-services" title="Permanent link">&para;</a></h1>
+<p>This section describes how to manage LeoFS nodes on systemd-based Linux distributions.</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<p>Users of LeoFS v1.3.8 or higher running official Linux packages under supported systemd-based Linux distros (currently: Ubuntu 16.04 and EL7-based) can use supplied systemd units for starting/stopping nodes. Advantages offered by doing so include:</p>
+<ul>
+<li>Way to automatically start nodes on system startup and correctly shutdown them during power off / reboot.</li>
+<li>Reliable way of controlling nodes (e.g. when LeoStorage node is launched in absence of LeoManager nodes, it will keep on restarting till LeoManager becomes available; nodes always being able to restart in case of unexpected situation such as crash or OOM kill)</li>
+<li>Correct inter-node dependencies (affecting startup/shutdown order) for launching nodes in all-in-one cluster (when all nodes are running on the same system, e.g. for testing)</li>
+</ul>
+<p>It's possible to switch to systemd-based way to control nodes (and back) anytime for users of v1.3.8 and higher running any supported systemd-based Linux distro.</p>
+<h2 id="switching-to-systemd-services">Switching to systemd services<a class="headerlink" href="#switching-to-systemd-services" title="Permanent link">&para;</a></h2>
+<p>For most users, switch is as easy as stopping currently running node and starting corresponding systemd service instead:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span># /usr/local/leofs/current/leo_manager_0/bin/leo_manager stop
+# systemctl start leofs-manager-master
+</pre></div>
+</td></tr></table>
+
+<p>Names of systemd units are: <code class="codehilite">leofs-manager-master</code>, <code class="codehilite">leofs-manager-slave</code>, <code class="codehilite">leofs-gateway</code>, <code class="codehilite">leofs-storage</code>. For example, to enable automatic startup of LeoStorage use command <code class="codehilite">systemctl enable leofs-storage</code>.</p>
+<p>Immediate change when running nodes as systemd services is that <code class="codehilite">erlang.log</code> does not exist anymore; the information from that log file is available using journalctl, e.g.</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span># journalctl -u leofs-manager-master
+</pre></div>
+</td></tr></table>
+
+<p>(currently, default configuration of Ubuntu 16.04 and EL7 additionally makes these messages available in syslog like <code class="codehilite">/var/log/messages</code> or <code class="codehilite">/var/log/syslog</code>, but this depends on system settings)</p>
+<h2 id="caveats-when-using-systemd-services">Caveats when using systemd services<a class="headerlink" href="#caveats-when-using-systemd-services" title="Permanent link">&para;</a></h2>
+<h3 id="mixing-old-and-new-way-to-launch-nodes">Mixing old and new way to launch nodes<a class="headerlink" href="#mixing-old-and-new-way-to-launch-nodes" title="Permanent link">&para;</a></h3>
+<p>Mixing launching / stopping nodes with launch scripts and systemd services is <strong>not supported</strong>. Please don't try to start node through systemd and then stop with launch script. However, some commands of current launch scripts (other than "start/stop/console/attach") are perfectly compatible with systemd services, for example:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="codehilite"><pre><span></span># systemctl start leofs-storage
+# /usr/local/leofs/current/leo_storage/bin/leo_storage ping
+pong
+# /usr/local/leofs/current/leo_storage/bin/leo_storage remote_console
+Erlang/OTP 20 [erts-9.0] [source] [64-bit] [smp:8:8] [ds:8:8:10] [async-threads:10] [hipe] [kernel-poll:false]
+
+Eshell V9.0  (abort with ^G)
+</pre></div>
+</td></tr></table>
+
+<p>There might be some places in LeoFS documentation that suggest you to execute launch scripts with start/stop commands. Please pay attention and substitute these with <code class="codehilite">systemctl start/stop</code> when running LeoFS nodes as systemd services.</p>
+<h3 id="running-nodes-as-user-other-than-leofs">Running nodes as user other than <code class="codehilite">leofs</code><a class="headerlink" href="#running-nodes-as-user-other-than-leofs" title="Permanent link">&para;</a></h3>
+<p>Current systemd unit files try to launch LeoFS nodes as <code class="codehilite">leofs</code> user and group. Changing that through environment variable or environment config file won't work, because it's likely that <code class="codehilite">leofs</code> user does not have priviledge to further change user. In case running as different user is needed for some reason, please change service files using systemd's <em>override</em> feature like in this example:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span># systemctl edit leofs-manager-master
+</pre></div>
+</td></tr></table>
+
+<p>Then enter</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="k">[Service]</span>
+<span class="na">User</span><span class="o">=</span><span class="s">&lt;someuser&gt;</span>
+<span class="na">Group</span><span class="o">=</span><span class="s">&lt;somegroup&gt;</span>
+</pre></div>
+</td></tr></table>
+
+<p>Save and exit. Repeat for other unit files, if needed. For every node, user set in systemd unit files and in .environment config must be the same.</p>
+<h3 id="long-shutdown-times">Long shutdown times<a class="headerlink" href="#long-shutdown-times" title="Permanent link">&para;</a></h3>
+<p>In some cases (primary, LeoStorage under high write load) a node can take a long time to shutdown. When running node as systemd service, <code class="codehilite">reboot</code> command will ask node to shutdown safely before actually rebooting the system, which might take a long time under these conditions. Current limit for LeoStorage is set to 30 minutes, though this can be changed using systemd's override feature. Long shutdown / reboot times are expected for LeoStorage under high load.</p>
+<h3 id="running-leofs-nodes-on-systems-running-other-erlang-software">Running LeoFS nodes on systems running other Erlang software<a class="headerlink" href="#running-leofs-nodes-on-systems-running-other-erlang-software" title="Permanent link">&para;</a></h3>
+<p>This section only applies to people who need to run LeoFS node <strong>and</strong> some other Erlang software on the same system.</p>
+<p>LeoFS, as well as certain types of other Erlang software relies on Erlang Port Mapper Daemon (<code class="codehilite">epmd</code>). Usually there can be only single instance of <code class="codehilite">epmd</code> running on the same node. To ensure smooth LeoFS operation, v1.3.8 and higher packages ensure that <code class="codehilite">leofs-epmd.socket</code> is enabled on boot and started right after upgrade. This is the case even when not using systemd-based services to launch LeoFS nodes. This service is running as "leofs" user by default (there should be no need to change that).</p>
+<p>Usually, service for LeoFS-supplied <code class="codehilite">epmd</code> (which uses socket activation) should work even for other Erlang software that might need <code class="codehilite">epmd</code> and there will be no problems. However, in case running some other instance of <code class="codehilite">epmd</code> is really needed, it should be possible to mask <code class="codehilite">leofs-epmd.socket</code> and <code class="codehilite">leofs-epmd.service</code> and remove dependencies on these units. It should work as long as <code class="codehilite">epmd</code> is always running before launching LeoFS nodes and is set up to listen on all interfaces (<code class="codehilite">0.0.0.0</code>), not just the local one.</p>
+                
+                  
+                
+              
+              
+                
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid">
+        
+          <a href="../flow/" title="Operation Flow" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+            </div>
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Operation Flow
+              </span>
+            </div>
+          </a>
+        
+        
+          <a href="../s3/" title="S3-API related Operations" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                S3-API related Operations
+              </span>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            (c) 2012-2017 LeoProject. All rights reserved.
+          </div>
+        
+        powered by
+        <a href="http://www.mkdocs.org" title="MkDocs">MkDocs</a>
+        and
+        <a href="http://squidfunk.github.io/mkdocs-material/" title="Material for MkDocs">
+          Material for MkDocs</a>
+      </div>
+      
+        
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../../assets/javascripts/application-0b7df094bf.js"></script>
+      <script>app.initialize({url:{base:"../../.."}})</script>
+      
+        <script src="../../../search/require.js"></script>
+      
+        <script src="../../../search/search.js"></script>
+      
+    
+    
+      
+      <script>!function(e,t,a,n,o,c,i){e.GoogleAnalyticsObject=o,e[o]=e[o]||function(){(e[o].q=e[o].q||[]).push(arguments)},e[o].l=1*new Date,c=t.createElement(a),i=t.getElementsByTagName(a)[0],c.async=1,c.src=n,i.parentNode.insertBefore(c,i)}(window,document,"script","https://www.google-analytics.com/analytics.js","ga"),ga("create","UA-5301881-3","leo-project.net"),ga("set","anonymizeIp",!0),ga("send","pageview");var links=document.getElementsByTagName("a");Array.prototype.map.call(links,function(e){e.host!=document.location.host&&e.addEventListener("click",function(){var t=e.getAttribute("data-md-action")||"follow";ga("send","event","outbound",t,e.href)})});var query=document.forms.search.query;query.addEventListener("blur",function(){if(this.value){var e=document.location.pathname;ga("send","pageview",e+"?q="+this.value)}})</script>
+      
+    
+  </body>
+</html>
