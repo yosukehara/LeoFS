@@ -1306,7 +1306,7 @@
 <td>Encryption algorithm <em>(AES 256)</em></td>
 </tr>
 <tr>
-<td><code class="codehilite">x-amz-copy-source​-server-side​-encryption​-customer-algorithm</code></td>
+<td><code class="codehilite">x-amz-copy-source​-server-side​-encryption​-customer-key</code></td>
 <td>256-bit, base64-encoded encryption key</td>
 </tr>
 <tr>
@@ -1319,10 +1319,10 @@
 <h3 id="encryption-and-decryption-of-an-object-on-leostorage">Encryption and decryption of an object on LeoStorage<a class="headerlink" href="#encryption-and-decryption-of-an-object-on-leostorage" title="Permanent link">&para;</a></h3>
 <p>LeoStorage receives an object and an encryption key information when LeoGateway requests <strong>WRITE operation</strong>, then it creates an initialization vector <em>(IV)</em> which is commonly called a nonce <em>(number used once)</em>, then it encrypts the object based on <strong>the encryption algorithm</strong> and <strong>the encryption key</strong> and <strong>the initialization vector</strong>, finally it replicates and stores the encrypted object and metadata which includes the following items:</p>
 <ul>
-<li>Base64-encoded 128-bit MD5 digest of the encryption key</li>
+<li>256-bit, base64-encoded encryption key</li>
 <li>Initialization Vector <em>(Nonce)</em></li>
 </ul>
-<p>A needle <em>(LeoObjectStorage Data Format)</em> includes those items which are stored into the custom metadata <em>(user-defined metadata)</em> section in order to be able to transform metadata to each other for durability. See <a href="https://leo-project.net/leofs/docs/architecture/leo_storage/#data-structure">LeoFS Documentation / Architecture / LeoStorage - Data Structure</a>.</p>
+<p>A needle <em>(LeoObjectStorage Data Format)</em> includes those items which are <strong>stored into the metadata section</strong> in order to be able to transform metadata to each other for durability. See <a href="https://leo-project.net/leofs/docs/architecture/leo_storage/#data-structure">LeoFS Documentation / Architecture / LeoStorage - Data Structure</a>.</p>
 <p>LeoStorage receives an encryption key information when LeoGateway requests <strong>READ operation</strong>, then it looks up the metadata which includes the encryption information and the object, then the object is decrypted based on <strong>the encryption algorithm</strong>, <strong>the encryption key</strong>, and <strong>the initialization vector</strong>, finally, it returns the decrypted object to LeoGateway.</p>
 <p>Even when Range GET operation is requested, LeoStorage handles the same as GET operation and retrieves the range of the object after object decryption.</p>
 <h2 id="drawbacks">Drawbacks<a class="headerlink" href="#drawbacks" title="Permanent link">&para;</a></h2>
@@ -1330,6 +1330,13 @@
 <li>LeoFS certainly degrade the read performance when retrieving an encrypted object <em>(secure data)</em> because LeoGateway never cache objects to securely protect data.</li>
 </ul>
 <h2 id="rationale-and-alternatives">Rationale and Alternatives<a class="headerlink" href="#rationale-and-alternatives" title="Permanent link">&para;</a></h2>
+<p>Initially, we were considering <strong>implementing object encryption and decryption on LeoGateway</strong>. However, we realized that there are the following problems, we decided to implement that on LeoStorage.</p>
+<ul>
+<li>LeoGateway's CPU usage tends to be high. We must not assign more processing, object encryption and decryption to LeoGateway.</li>
+<li>In many cases, the number of LeoGateway is smaller than the number of LeoStorage. Load balancing cannot be expected.</li>
+<li>In order to prevent vulnerabilities, secure data must not be cached.</li>
+<li>When handling Range GET operation, LeoGateway retrieves an object in the specified range from LeoStorage, then decrypt it, finally returns it to a client. In this way, the data traffic is high than retrieving unencrypted objects.</li>
+</ul>
 <h2 id="unresolved-questions">Unresolved questions<a class="headerlink" href="#unresolved-questions" title="Permanent link">&para;</a></h2>
 <div class="footnote">
 <hr />
