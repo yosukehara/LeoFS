@@ -1265,7 +1265,7 @@
 <li>Multipart Upload</li>
 <li>COPY</li>
 </ul>
-<p>LeoGateway never caches objects to securely protect data.</p>
+<p>LeoGateway never caches objects to securely protect.</p>
 <h3 id="request-handling-on-leogateway">Request Handling on LeoGateway<a class="headerlink" href="#request-handling-on-leogateway" title="Permanent link">&para;</a></h3>
 <p>When LeoGateway receives an SSE-C request from a LeoFS' client, it retrieves the encryption key information from the request header, then it sends the information and the object <em>(only if PUT or Multipart Upload operation was requested)</em> to LeoStorage.</p>
 <p>When a requested object corresponds to Large Size Object, LeoGateway divides the object to plural chunks of it, then it sends each chunk with the encryption key information to LeoStorage in order to individually execute object encryption.</p>
@@ -1327,7 +1327,7 @@
 <p>Even when Range GET operation is requested, LeoStorage handles the same as GET operation and retrieves the range of the object after object decryption.</p>
 <h2 id="drawbacks">Drawbacks<a class="headerlink" href="#drawbacks" title="Permanent link">&para;</a></h2>
 <ul>
-<li>LeoFS certainly degrade the read performance when retrieving an encrypted object <em>(secure data)</em> because LeoGateway never cache objects to securely protect data.</li>
+<li>Compared with an unencrypted object, LeoFS certainly degrade the read performance when retrieving an encrypted object <em>(secure data)</em> because LeoGateway never caches the objects to securely protect.</li>
 </ul>
 <h2 id="rationale-and-alternatives">Rationale and Alternatives<a class="headerlink" href="#rationale-and-alternatives" title="Permanent link">&para;</a></h2>
 <p>Initially, we were considering <strong>implementing object encryption and decryption on LeoGateway</strong>. However, we realized that there are the following problems, we decided to implement that on LeoStorage.</p>
@@ -1335,7 +1335,7 @@
 <li>LeoGateway's CPU usage tends to be high. We must not assign more processing, object encryption and decryption to LeoGateway.</li>
 <li>In many cases, the number of LeoGateway is smaller than the number of LeoStorage. Load balancing cannot be expected.</li>
 <li>In order to prevent vulnerabilities, secure data must not be cached.</li>
-<li>When handling Range GET operation, LeoGateway retrieves an object in the specified range from LeoStorage, then decrypt it, finally returns it to a client. In this way, the data traffic is high than retrieving unencrypted objects.</li>
+<li>When handling Range GET operation, LeoGateway retrieves an object in the specified range from LeoStorage, then decrypt it, finally returns it to a client. In this way, the data traffic is higher than retrieving unencrypted objects.</li>
 </ul>
 <h2 id="unresolved-questions">Unresolved questions<a class="headerlink" href="#unresolved-questions" title="Permanent link">&para;</a></h2>
 <div class="footnote">
