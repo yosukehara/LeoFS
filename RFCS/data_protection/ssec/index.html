@@ -1051,6 +1051,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#copy-operation" title="COPY Operation" class="md-nav__link">
+    COPY Operation
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1181,6 +1188,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#copy-operation" title="COPY Operation" class="md-nav__link">
+    COPY Operation
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1292,7 +1306,45 @@
 </tr>
 </tbody>
 </table>
-<p>When LeoGateway accepts COPY operation, a client sends a request header which includes the following items. The destination object is encrypted by using those items.</p>
+<h4 id="copy-operation">COPY Operation<a class="headerlink" href="#copy-operation" title="Permanent link">&para;</a></h4>
+<p>There are four patterns in COPY operation. In SSE-C implementation, LeoFS needs to implement the following cases 1, 2 and 3:</p>
+<table>
+<thead>
+<tr>
+<th align="center">No</th>
+<th>Source</th>
+<th>Destination</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">1</td>
+<td>Encrypted</td>
+<td>Encrypted</td>
+<td>Plans to implement with v2.0</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td>Encrypted</td>
+<td>Unencrypted</td>
+<td>Plans to implement with v2.0</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td>Unencrypted</td>
+<td>Encrypted</td>
+<td>Plans to implement with v2.0</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td>Unencrypted</td>
+<td>Unencrypted</td>
+<td>Ready</td>
+</tr>
+</tbody>
+</table>
+<p>If the source object is encrypted using SSE-C <em>(case 1 and 2)</em>, LeoGateway receives encryption key information which includes the following headers so that LeoStorage can decrypt the object for copying.</p>
 <table>
 <thead>
 <tr>
@@ -1315,11 +1367,11 @@
 </tr>
 </tbody>
 </table>
-<p>See more details on <a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html">AWS S3-API - Protecting Data Using SSE-C</a>.</p>
+<p>Furthermore, when encrypting the destination object <em>(case 1 and 3)</em>, LeoGateway receives encryption key information which is <a href="#encryption-key-information-in-http-header">Encryption key information in HTTP Header</a>.</p>
 <h3 id="encryption-and-decryption-of-an-object-on-leostorage">Encryption and decryption of an object on LeoStorage<a class="headerlink" href="#encryption-and-decryption-of-an-object-on-leostorage" title="Permanent link">&para;</a></h3>
 <p>LeoStorage receives an object and an encryption key information when LeoGateway requests <strong>WRITE operation</strong>, then it creates an initialization vector <em>(IV)</em> which is commonly called a nonce <em>(number used once)</em>, then it encrypts the object based on <strong>the encryption algorithm</strong> and <strong>the encryption key</strong> and <strong>the initialization vector</strong>, finally it replicates and stores the encrypted object and metadata which includes the following items:</p>
 <ul>
-<li>256-bit, base64-encoded encryption key</li>
+<li>256-bit, Key Encryption Key</li>
 <li>Initialization Vector <em>(Nonce)</em></li>
 </ul>
 <p>A needle <em>(LeoObjectStorage Data Format)</em> includes those items which are <strong>stored into the metadata section</strong> in order to be able to transform metadata to each other for durability. See <a href="https://leo-project.net/leofs/docs/architecture/leo_storage/#data-structure">LeoFS Documentation / Architecture / LeoStorage - Data Structure</a>.</p>
@@ -1342,7 +1394,7 @@
 <hr />
 <ol>
 <li id="fn:1">
-<p><a "https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html" target="_blank">Amazon S3 / Protecting Data Using Server-Side Encryption with Customer-Provided Encryption Keys (SSE-C)</a>&#160;<a class="footnote-backref" href="#fnref:1" rev="footnote" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+<p><a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html" target="_blank">Amazon S3 / Protecting Data Using Server-Side Encryption with Customer-Provided Encryption Keys (SSE-C)</a>&#160;<a class="footnote-backref" href="#fnref:1" rev="footnote" title="Jump back to footnote 1 in the text">&#8617;</a></p>
 </li>
 <li id="fn:2">
 <p><a href="https://www.erlang-solutions.com/blog/erlang-distribution-over-tls.html" target="_blank">Erlang distribution over TLS</a>&#160;<a class="footnote-backref" href="#fnref:2" rev="footnote" title="Jump back to footnote 2 in the text">&#8617;</a></p>
