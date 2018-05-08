@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,14 +18,11 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% ---------------------------------------------------------------------
-%% Leo Gateway - HTTP-behabiour
-%% @doc
-%% @end
 %%======================================================================
 -module(leo_gateway_http_behaviour).
 
 -include("leo_http.hrl").
+
 
 %% Bucket handlers
 -callback(get_bucket(Req::cowboy_req:req(), Key::binary(), HttpParams::#req_params{}) ->

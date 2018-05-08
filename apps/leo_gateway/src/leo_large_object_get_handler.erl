@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway Large Object GET Handler
 %%
-%% Copyright (c) 2012-2016 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -53,21 +53,19 @@
 -define(DEF_TIMEOUT, timer:seconds(30)).
 -define(DEF_RETRY_TIMES, 5).
 
--record(state, {
-          key = <<>> :: binary(),
-          transport_rec :: #transport_record{},
-          is_disc_cache_active :: boolean(),
-          iterator :: leo_large_object_commons:iterator()
-         }).
+-record(state, {key = <<>> :: binary(),
+                transport_rec :: #transport_record{},
+                is_disc_cache_active :: boolean(),
+                iterator :: leo_large_object_commons:iterator()
+               }).
 
--record(req_info, {
-          key = <<>> :: binary(),
-          chunk_key = <<>>  :: binary(),
-          request :: any(),
-          metadata :: #?METADATA{},
-          reference :: reference(),
-          transport_rec :: #transport_record{}
-         }).
+-record(req_info, {key = <<>> :: binary(),
+                   chunk_key = <<>>  :: binary(),
+                   request :: any(),
+                   metadata :: #?METADATA{},
+                   reference :: reference(),
+                   transport_rec :: #transport_record{}
+                  }).
 
 
 %%====================================================================
@@ -108,6 +106,7 @@ init([Key, TransportRec, IsDiskCacheActive]) ->
                    transport_rec = TransportRec,
                    is_disc_cache_active = IsDiskCacheActive},
     {ok, State}.
+
 
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
@@ -154,17 +153,22 @@ handle_call({get, TotalOfChunkedObjs, Req, Meta}, _From,
             end,
     {reply, Reply, State}.
 
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
+
 
 handle_info(_Info, State) ->
     {noreply, State}.
 
+
 terminate(_Reason, _State) ->
     ok.
 
+
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
 
 %% Callbacks for leo_tran_behaviour
 run(Key, _, _, {TotalOfChunkedObjs, Req, Meta, TransportRec}, _) ->

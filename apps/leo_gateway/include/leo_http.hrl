@@ -1,8 +1,8 @@
 %%======================================================================
 %%
-%% Leo S3 HTTP
+%% Leo HTTP
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -21,11 +21,11 @@
 %%======================================================================
 
 %% HTTP METHODS
--define(HTTP_GET,    <<"GET">>).
--define(HTTP_POST,   <<"POST">>).
--define(HTTP_PUT,    <<"PUT">>).
+-define(HTTP_GET, <<"GET">>).
+-define(HTTP_POST, <<"POST">>).
+-define(HTTP_PUT, <<"PUT">>).
 -define(HTTP_DELETE, <<"DELETE">>).
--define(HTTP_HEAD,   <<"HEAD">>).
+-define(HTTP_HEAD, <<"HEAD">>).
 
 %% HTTP-RELATED
 -define(SERVER_HEADER, {<<"server">>,<<"LeoFS">>}).
@@ -41,66 +41,66 @@
 -define(ERR_TYPE_INTERNAL_ERROR, internal_server_error).
 
 %% HTTP HEADER
--define(HTTP_HEAD_AGE,                <<"age">>).
--define(HTTP_HEAD_AUTHORIZATION,      <<"authorization">>).
--define(HTTP_HEAD_CACHE_CTRL,         <<"cache-control">>).
--define(HTTP_HEAD_CONTENT_LENGTH,     <<"content-length">>).
--define(HTTP_HEAD_CONTENT_MD5,        <<"content-md5">>).
--define(HTTP_HEAD_CONTENT_TYPE,       <<"content-type">>).
--define(HTTP_HEAD_DATE,               <<"date">>).
--define(HTTP_HEAD_ETAG,               <<"etag">>).
--define(HTTP_HEAD_IF_MODIFIED_SINCE,  <<"if-modified-since">>).
--define(HTTP_HEAD_LAST_MODIFIED,      <<"last-modified">>).
--define(HTTP_HEAD_PREFIX,             <<"prefix">>).
--define(HTTP_HEAD_RANGE,              <<"range">>).
--define(HTTP_HEAD_CONTENT_ENCODING,   <<"content-encoding">>).
+-define(HTTP_HEADER_AGE, <<"age">>).
+-define(HTTP_HEADER_AUTHORIZATION, <<"authorization">>).
+-define(HTTP_HEADER_CACHE_CTRL, <<"cache-control">>).
+-define(HTTP_HEADER_CONTENT_LENGTH, <<"content-length">>).
+-define(HTTP_HEADER_CONTENT_MD5, <<"content-md5">>).
+-define(HTTP_HEADER_CONTENT_TYPE, <<"content-type">>).
+-define(HTTP_HEADER_DATE, <<"date">>).
+-define(HTTP_HEADER_ETAG, <<"etag">>).
+-define(HTTP_HEADER_IF_MODIFIED_SINCE, <<"if-modified-since">>).
+-define(HTTP_HEADER_LAST_MODIFIED, <<"last-modified">>).
+-define(HTTP_HEADER_PREFIX, <<"prefix">>).
+-define(HTTP_HEADER_RANGE, <<"range">>).
+-define(HTTP_HEADER_CONTENT_ENCODING, <<"content-encoding">>).
 
--define(HTTP_HEAD_RESP_AGE,               <<"Age">>).
--define(HTTP_HEAD_RESP_CACHE_CTRL,        <<"Cache-Control">>).
--define(HTTP_HEAD_RESP_CONTENT_LENGTH,    <<"Content-Length">>).
--define(HTTP_HEAD_RESP_CONTENT_MD5,       <<"Content-MD5">>).
--define(HTTP_HEAD_RESP_CONTENT_TYPE,      <<"Content-Type">>).
--define(HTTP_HEAD_RESP_CONTENT_RANGE,     <<"Content-Range">>).
--define(HTTP_HEAD_RESP_ETAG,              <<"ETag">>).
--define(HTTP_HEAD_RESP_IF_MODIFIED_SINCE, <<"If-Modified-Since">>).
--define(HTTP_HEAD_RESP_LAST_MODIFIED,     <<"Last-Modified">>).
+-define(HTTP_HEADER_RESP_AGE, <<"Age">>).
+-define(HTTP_HEADER_RESP_CACHE_CTRL, <<"Cache-Control">>).
+-define(HTTP_HEADER_RESP_CONTENT_LENGTH, <<"Content-Length">>).
+-define(HTTP_HEADER_RESP_CONTENT_MD5, <<"Content-MD5">>).
+-define(HTTP_HEADER_RESP_CONTENT_TYPE, <<"Content-Type">>).
+-define(HTTP_HEADER_RESP_CONTENT_RANGE, <<"Content-Range">>).
+-define(HTTP_HEADER_RESP_ETAG, <<"ETag">>).
+-define(HTTP_HEADER_RESP_IF_MODIFIED_SINCE, <<"If-Modified-Since">>).
+-define(HTTP_HEADER_RESP_LAST_MODIFIED, <<"Last-Modified">>).
 
--define(HTTP_HEAD_X_AMZ_META_DIRECTIVE,         <<"x-amz-metadata-directive">>).
--define(HTTP_HEAD_X_AMZ_COPY_SOURCE,            <<"x-amz-copy-source">>).
--define(HTTP_HEAD_X_AMZ_ID_2,                   <<"x-amz-id-2">>).
--define(HTTP_HEAD_X_AMZ_REQ_ID,                 <<"x-amz-request-id">>).
--define(HTTP_HEAD_X_AMZ_ACL,                    <<"x-amz-acl">>).
--define(HTTP_HEAD_X_AMZ_CONTENT_SHA256,         <<"x-amz-content-sha256">>).
--define(HTTP_HEAD_X_AMZ_DECODED_CONTENT_LENGTH, <<"x-amz-decoded-content-length">>).
--define(HTTP_HRAD_X_AMZ_DATE,                   <<"x-amz-date">>).
--define(HTTP_HEAD_X_AMZ_META_DIRECTIVE_COPY,    <<"COPY">>).
--define(HTTP_HEAD_X_AMZ_META_DIRECTIVE_REPLACE, <<"REPLACE">>).
--define(HTTP_HEAD_X_FROM_CACHE,                 <<"x-from-cache">>).
+-define(HTTP_HEADER_X_AMZ_META_DIRECTIVE, <<"x-amz-metadata-directive">>).
+-define(HTTP_HEADER_X_AMZ_COPY_SOURCE, <<"x-amz-copy-source">>).
+-define(HTTP_HEADER_X_AMZ_ID_2, <<"x-amz-id-2">>).
+-define(HTTP_HEADER_X_AMZ_REQ_ID, <<"x-amz-request-id">>).
+-define(HTTP_HEADER_X_AMZ_ACL, <<"x-amz-acl">>).
+-define(HTTP_HEADER_X_AMZ_CONTENT_SHA256, <<"x-amz-content-sha256">>).
+-define(HTTP_HEADER_X_AMZ_DECODED_CONTENT_LENGTH, <<"x-amz-decoded-content-length">>).
+-define(HTTP_HEADER_X_AMZ_DATE, <<"x-amz-date">>).
+-define(HTTP_HEADER_X_AMZ_META_DIRECTIVE_COPY, <<"COPY">>).
+-define(HTTP_HEADER_X_AMZ_META_DIRECTIVE_REPLACE, <<"REPLACE">>).
+-define(HTTP_HEADER_X_FROM_CACHE, <<"x-from-cache">>).
 
 
 %% @see: http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
--define(HTTP_HEAD_X_VAL_AWS4_SHA256, <<"STREAMING-AWS4-HMAC-SHA256-PAYLOAD">>).
--define(HTTP_HEAD_X_AWS_SIGNATURE_V2, <<"AWS ">>).
--define(HTTP_HEAD_X_AWS_SIGNATURE_V4, <<"AWS4">>).
+-define(HTTP_HEADER_X_VAL_AWS4_SHA256, <<"STREAMING-AWS4-HMAC-SHA256-PAYLOAD">>).
+-define(HTTP_HEADER_X_AWS_SIGNATURE_V2, <<"AWS ">>).
+-define(HTTP_HEADER_X_AWS_SIGNATURE_V4, <<"AWS4">>).
 
--define(AWS_SIGNATURE_V4_SHA256_KEY,  <<"AWS4-HMAC-SHA256-PAYLOAD">>).
+-define(AWS_SIGNATURE_V4_SHA256_KEY, <<"AWS4-HMAC-SHA256-PAYLOAD">>).
 -define(AWS_SIGNATURE_V4_SHA256_HASH, <<"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855">>).
 %% leo_hex:binary_to_hex(crypto:hash(sha256, <<"">>))
 
 
 -define(HTTP_CTYPE_OCTET_STREAM, <<"application/octet-stream">>).
--define(HTTP_CTYPE_XML,          <<"application/xml">>).
+-define(HTTP_CTYPE_XML, <<"application/xml">>).
 
--define(HTTP_QS_BIN_ACL,         <<"acl">>).
--define(HTTP_QS_BIN_UPLOADS,     <<"uploads">>).
--define(HTTP_QS_BIN_UPLOAD_ID,   <<"uploadId">>).
+-define(HTTP_QS_BIN_ACL, <<"acl">>).
+-define(HTTP_QS_BIN_UPLOADS, <<"uploads">>).
+-define(HTTP_QS_BIN_UPLOAD_ID, <<"uploadId">>).
 -define(HTTP_QS_BIN_PART_NUMBER, <<"partNumber">>).
--define(HTTP_QS_BIN_MARKER,      <<"marker">>).
--define(HTTP_QS_BIN_MAXKEYS,     <<"max-keys">>).
--define(HTTP_QS_BIN_MULTI_DELETE,<<"delete">>).
--define(HTTP_QS_BIN_DELIMITER,   <<"delimiter">>).
--define(HTTP_QS_BIN_VERSIONING,  <<"versioning">>).
--define(HTTP_QS_BIN_LOCATION,    <<"location">>).
+-define(HTTP_QS_BIN_MARKER, <<"marker">>).
+-define(HTTP_QS_BIN_MAXKEYS, <<"max-keys">>).
+-define(HTTP_QS_BIN_MULTI_DELETE, <<"delete">>).
+-define(HTTP_QS_BIN_DELIMITER, <<"delimiter">>).
+-define(HTTP_QS_BIN_VERSIONING, <<"versioning">>).
+-define(HTTP_QS_BIN_LOCATION, <<"location">>).
 
 -define(HTTP_ST_OK,                  200).
 -define(HTTP_ST_NO_CONTENT,          204).
@@ -116,37 +116,37 @@
 -define(HTTP_ST_SERVICE_UNAVAILABLE, 503).
 -define(HTTP_ST_GATEWAY_TIMEOUT,     504).
 
--define(HTTP_MAXKEYS_LIMIT,          1000).
--define(HTTP_METADATA_LIMIT,         2048).
+-define(HTTP_MAXKEYS_LIMIT, 1000).
+-define(HTTP_METADATA_LIMIT, 2048).
 
 -define(CACHE_HTTP,  'http').
 -define(CACHE_INNER, 'inner').
 -type(cache_method() :: ?CACHE_HTTP | ?CACHE_INNER).
 
 %% Default values
--define(DEF_HTTP_PORT,                8080).
--define(DEF_HTTP_SSL_PORT,            8443).
--define(DEF_HTTP_SSL_C_FILE,          "./server_cert.pem").
--define(DEF_HTTP_SSL_K_FILE,          "./server_key.pem").
--define(DEF_HTTP_NUM_OF_ACCEPTORS,    32).
--define(DEF_HTTP_CUSTOM_HEADER_CONF,  "./http_custom_header.conf").
--define(DEF_HTTP_TIMEOUT_FOR_HEADER,  5000).
--define(DEF_HTTP_TIMEOUT_FOR_BODY,    15000).
--define(DEF_HTTP_SEND_CHUNK_LEN,      5242880).
--define(DEF_HTTP_CACHE,               false).
--define(DEF_HTTP_MAX_KEEPALIVE,       1024).
--define(DEF_CACHE_WORKERS,            64).
--define(DEF_CACHE_RAM_CAPACITY,       64000000).
--define(DEF_CACHE_DISC_CAPACITY,      64000000).
+-define(DEF_HTTP_PORT, 8080).
+-define(DEF_HTTP_SSL_PORT, 8443).
+-define(DEF_HTTP_SSL_C_FILE, "./server_cert.pem").
+-define(DEF_HTTP_SSL_K_FILE, "./server_key.pem").
+-define(DEF_HTTP_NUM_OF_ACCEPTORS,  32).
+-define(DEF_HTTP_CUSTOM_HEADER_CONF, "./http_custom_header.conf").
+-define(DEF_HTTP_TIMEOUT_FOR_HEADER, 5000).
+-define(DEF_HTTP_TIMEOUT_FOR_BODY, 15000).
+-define(DEF_HTTP_SEND_CHUNK_LEN, 5242880).
+-define(DEF_HTTP_CACHE, false).
+-define(DEF_HTTP_MAX_KEEPALIVE, 1024).
+-define(DEF_CACHE_WORKERS, 64).
+-define(DEF_CACHE_RAM_CAPACITY, 64000000).
+-define(DEF_CACHE_DISC_CAPACITY, 64000000).
 -define(DEF_CACHE_DISC_THRESHOLD_LEN, 1000000).
--define(DEF_CACHE_DISC_DIR_DATA,      "./cache/data").
--define(DEF_CACHE_DISC_DIR_JOURNAL,   "./cache/journal").
--define(DEF_CACHE_EXPIRE,             300).
--define(DEF_CACHE_MAX_CONTENT_LEN,    1000000).
--define(DEF_LOBJ_MAX_CHUNKED_OBJS,       1000).
--define(DEF_LOBJ_MAX_LEN_OF_OBJ,         524288000).
--define(DEF_LOBJ_CHUNK_OBJ_LEN,          5242880).
--define(DEF_LOBJ_READING_CHUNK_OBJ_LEN,  5242880). %% since v0.16.8
+-define(DEF_CACHE_DISC_DIR_DATA, "./cache/data").
+-define(DEF_CACHE_DISC_DIR_JOURNAL, "./cache/journal").
+-define(DEF_CACHE_EXPIRE, 300).
+-define(DEF_CACHE_MAX_CONTENT_LEN, 1000000).
+-define(DEF_LOBJ_MAX_CHUNKED_OBJS, 1000).
+-define(DEF_LOBJ_MAX_LEN_OF_OBJ, 524288000).
+-define(DEF_LOBJ_CHUNK_OBJ_LEN, 5242880).
+-define(DEF_LOBJ_READING_CHUNK_OBJ_LEN, 5242880). %% since v0.16.8
 -define(DEF_LOBJ_THRESHOLD_OF_CHUNK_LEN, 5767168).
 -define(DEF_S3API_MAX_KEYS, 1000).
 -define(DEF_MAX_NUM_OF_METADATAS, 50).
@@ -297,7 +297,7 @@
 -define(httP_cache_ctl(_C),
         lists:append(["max-age=",integer_to_list(_C)])).
 -define(http_content_type(_H),
-        case lists:keyfind(?HTTP_HEAD_CONTENT_TYPE,1,_H) of
+        case lists:keyfind(?HTTP_HEADER_CONTENT_TYPE,1,_H) of
             false     ->
                 ?HTTP_CTYPE_OCTET_STREAM;
             {_, Val} ->
@@ -478,140 +478,160 @@
 -define(ETS_HTTP_OPTION_KEY, 'leo_gateway_http_opts_key').
 
 %% Records
--type aws_chunk_state() ::  wait_size | wait_head | read_chunk | error | done.
+-type(aws_chunk_state() ::  wait_size |
+                            wait_head |
+                            read_chunk |
+                            error |
+                            done).
 
--record(aws_chunk_sign_params, {sign_head       :: binary(),
-                                sign_key        :: binary(),
-                                prev_sign       :: binary(),
-                                chunk_sign      :: binary(),
-                                chunk_size      :: non_neg_integer(),
-                                hash_context    :: undefined | {crypto:digest_type(), binary()}
+-record(aws_chunk_sign_params, {sign_head = <<>> :: binary(),
+                                sign_key = <<>> :: binary(),
+                                prev_sign = <<>> :: binary(),
+                                chunk_sign = <<>> :: binary(),
+                                chunk_size = 0 :: non_neg_integer(),
+                                hash_context :: undefined | {crypto:digest_type(), binary()}
                                }).
 
--record(aws_chunk_decode_state, {buffer         :: binary(),
-                                 dec_state      :: aws_chunk_state(),
-                                 chunk_offset   :: non_neg_integer(),
-                                 sign_params    :: #aws_chunk_sign_params{},
-                                 total_len      :: non_neg_integer()
+-record(aws_chunk_decode_state, {buffer = <<>> :: binary(),
+                                 dec_state :: aws_chunk_state(),
+                                 chunk_offset = 0 :: non_neg_integer(),
+                                 sign_params :: #aws_chunk_sign_params{},
+                                 total_len = 0 :: non_neg_integer()
                                 }).
 
--record(http_options, {
-          %% for basic
-          handler                      :: atom(),         %% http-handler
-          port = 0                     :: pos_integer(),  %% http port number
-          ssl_port = 0                 :: pos_integer(),  %% ssl port number
-          ssl_certfile = []            :: string(),       %% ssl cert file name
-          ssl_keyfile = []             :: string(),       %% ssk key file name
-          num_of_acceptors = 0         :: pos_integer(),  %% # of acceptors (http server's workers)
-          max_keepalive = 0            :: pos_integer(),  %% # of request per processes
-          headers_config_file = []     :: string(),       %% HTTP custom header configuration file path
-          timeout_for_header           :: pos_integer(),  %% Timeout for reading header
-          timeout_for_body             :: pos_integer(),  %% Timeout for reading body
-          sending_chunked_obj_len = 0  :: pos_integer(),  %% sending chunk length
-          %% for cache
-          cache_method                 :: cache_method(), %% cahce method: [http | inner]
-          cache_workers = 0            :: pos_integer(),  %% number of chache-fun's workers
-          cache_ram_capacity = 0       :: pos_integer(),  %% cache size (RAM)
-          cache_disc_capacity = 0      :: pos_integer(),  %% cache size (Disc)
-          cache_disc_threshold_len = 0 :: pos_integer(),  %% cache disc threshold length (Disc)
-          cache_disc_dir_data = []     :: string(),       %% cache-directory for data    (Disc)
-          cache_disc_dir_journal = []  :: string(),       %% cache-directory for journal (Disc)
-          cache_expire = 0             :: pos_integer(),  %% cache expire time (sec)
-          cache_max_content_len = 0    :: pos_integer(),  %% cache max content length (byte)
-          cachable_content_type = []   :: list(),         %% cachable content types
-          cachable_path_pattern = []   :: list(),         %% cachable path patterns
-          has_disk_cache = false       :: boolean(),      %% Has Disk Cache?
-          %% for multipart upload
-          dont_abort_cleanup = false   :: boolean(),      %% whether removing related objects when handling abort MU request
-          %% for large-object
-          max_chunked_objs = 0         :: pos_integer(),  %% max chunked objects
-          max_len_of_obj = 0           :: pos_integer(),  %% max length a object (byte)
-          chunked_obj_len = 0          :: pos_integer(),  %% chunked object length for large object (byte)
-          reading_chunked_obj_len = 0  :: pos_integer(),  %% reading chunked object length for large object (byte)
-          threshold_of_chunk_len = 0   :: pos_integer()   %% threshold of chunk length for large object (byte)
-         }).
+%% for basic
+-record(http_options, {handler                      :: atom(),         %% http-handler
+                       port = 0                     :: pos_integer(),  %% http port number
+                       ssl_port = 0                 :: pos_integer(),  %% ssl port number
+                       ssl_certfile = []            :: string(),       %% ssl cert file name
+                       ssl_keyfile = []             :: string(),       %% ssk key file name
+                       num_of_acceptors = 0         :: pos_integer(),  %% # of acceptors (http server's workers)
+                       max_keepalive = 0            :: pos_integer(),  %% # of request per processes
+                       headers_config_file = []     :: string(),       %% HTTP custom header configuration file path
+                       timeout_for_header           :: pos_integer(),  %% Timeout for reading header
+                       timeout_for_body             :: pos_integer(),  %% Timeout for reading body
+                       sending_chunked_obj_len = 0  :: pos_integer(),  %% sending chunk length
+                       %% for cache
+                       cache_method                 :: cache_method(), %% cahce method: [http | inner]
+                       cache_workers = 0            :: pos_integer(),  %% number of chache-fun's workers
+                       cache_ram_capacity = 0       :: pos_integer(),  %% cache size (RAM)
+                       cache_disc_capacity = 0      :: pos_integer(),  %% cache size (Disc)
+                       cache_disc_threshold_len = 0 :: pos_integer(),  %% cache disc threshold length (Disc)
+                       cache_disc_dir_data = []     :: string(),       %% cache-directory for data    (Disc)
+                       cache_disc_dir_journal = []  :: string(),       %% cache-directory for journal (Disc)
+                       cache_expire = 0             :: pos_integer(),  %% cache expire time (sec)
+                       cache_max_content_len = 0    :: pos_integer(),  %% cache max content length (byte)
+                       cachable_content_type = []   :: list(),         %% cachable content types
+                       cachable_path_pattern = []   :: list(),         %% cachable path patterns
+                       has_disk_cache = false       :: boolean(),      %% Has Disk Cache?
+                       %% for multipart upload
+                       dont_abort_cleanup = false   :: boolean(),      %% whether removing related objects when handling abort MU request
+                       %% for large-object
+                       max_chunked_objs = 0         :: pos_integer(),  %% max chunked objects
+                       max_len_of_obj = 0           :: pos_integer(),  %% max length a object (byte)
+                       chunked_obj_len = 0          :: pos_integer(),  %% chunked object length for large object (byte)
+                       reading_chunked_obj_len = 0  :: pos_integer(),  %% reading chunked object length for large object (byte)
+                       threshold_of_chunk_len = 0   :: pos_integer()   %% threshold of chunk length for large object (byte)
+                      }).
 
--record(req_params, {
-          %% basic info
-          handler                    :: atom(),                 %% http-handler
-          path = <<>>                :: binary(),               %% path (uri)
-          bucket_name = <<>>         :: binary(),               %% bucket-name (for s3-api)
-          bucket_info = undefined    :: term(),                 %% bucket (for s3-api)
-          redundancy_method          :: atom(),                 %% redundancy method
-          ec_method                  :: atom(),                 %% erasure-coding method
-          ec_params                  :: {pos_integer(), pos_integer()}|undefined, %% erasure-coding params
-          access_key_id = <<>>       :: binary(),               %% s3's access-key-id
-          token_length = 0           :: non_neg_integer(),      %% length of tokened path
-          min_layers = 0             :: non_neg_integer(),      %% acceptable # of min layers
-          max_layers = 0             :: non_neg_integer(),      %% acceptable # of max layers
-          custom_header_settings     :: list() | undefined,     %% http custom header settings
-          timeout_for_header         :: pos_integer(),          %% Timeout for reading header
-          timeout_for_body           :: pos_integer(),          %% Timeout for reading body
-          sending_chunked_obj_len    :: pos_integer(),          %% sending chunk length
-          qs_prefix = <<>>           :: binary() | none,        %% query string
-          range_header               :: string(),               %% range header
-          custom_metadata = <<>>     :: binary(),
-          has_inner_cache = false    :: boolean(),              %% has inner-cache?
-          has_disk_cache = false     :: boolean(),              %% has disk cache?
-          is_cached = false          :: boolean(),              %% is cached?
-          is_dir = false             :: boolean(),              %% is directory?
-          is_location = false        :: boolean(),              %% is location?
-          is_multi_delete = false    :: boolean(),              %% is multi delete request?
-          %% for multipart upload
-          dont_abort_cleanup = false :: boolean(),              %% whether removing related objects when handling abort MU request
-          %% for large-object
-          is_upload = false            :: boolean(),            %% is upload operation? (for multipart upload)
-          is_aws_chunked = false       :: boolean(),            %% is AWS Chunked? (Signature V4)
-          is_acl = false               :: boolean(),            %% is acl operation?
-          ia_location = false          :: boolean(),            %% is location operation?
-          upload_id = <<>>             :: binary(),             %% upload id for multipart upload
-          upload_part_num = 0          :: non_neg_integer(),    %% upload part number for multipart upload
-          max_chunked_objs = 0         :: non_neg_integer(),    %% max chunked objects
-          max_len_for_multipart = 0    :: non_neg_integer(),    %% max length a multipart object (byte)
-          max_len_of_obj = 0           :: non_neg_integer(),    %% max length a object (byte)
-          chunked_obj_len = 0          :: non_neg_integer(),    %% chunked object length for large-object (byte)
-          reading_chunked_obj_len = 0  :: non_neg_integer(),    %% creading hunked object length for large object (byte)
-          threshold_of_chunk_len = 0   :: non_neg_integer(),    %% threshold of chunk length for large-object (byte)
-          transfer_decode_fun       :: function() | undefined,  %% transfer decode function
-          transfer_decode_state     :: #aws_chunk_decode_state{} | undefined,   %% transfer decode state
-          %% For Latency Measurement
-          begin_time = 0               :: non_neg_integer()     %% Handle Start Time
-         }).
+%% Request Parameters
 
--record(put_req_params, {
-          path = <<>> :: binary(),
-          body = <<>> :: binary(),
-          meta = <<>> :: binary(),
-          msize = 0 :: non_neg_integer(),
-          dsize = 0 :: non_neg_integer(),
-          total_chunks = 0 :: non_neg_integer(),
-          cindex = 0 :: non_neg_integer(),
-          csize = 0 :: non_neg_integer(),
-          digest = 0 :: non_neg_integer(),
-          bucket_info = undefined :: term()|undefined
-          }).
+-type(ec_method() :: vandrs |
+                     cauchyrs |
+                     liberation |
+                     isars).
 
--record(transport_record, {
-          transport :: module(),
-          socket    :: inet:socket(),
-          sending_chunked_obj_len :: pos_integer()
-         }).
+-type(ec_params() :: {pos_integer, pos_integer} |
+                     undefined).
 
--record(cache, {
-          etag         = 0    :: non_neg_integer(),   %% actual value is checksum
-          mtime        = 0    :: non_neg_integer(),   %% gregorian_seconds
-          content_type = <<>> :: binary() | string(), %% from a Content-Type header
-          body         = <<>> :: binary(),            %% body (value),
-          cmeta        = <<>> :: binary(),            %% custom metadata
-          size         = 0    :: non_neg_integer(),   %% body size
-          msize        = 0    :: non_neg_integer(),   %% custom metadata size
-          file_path    = ""   :: file:name_all()      %% file path when this cache is stored on disk
-         }).
+-type(custom_header_settings() :: [tuple()] |
+                                  undefined).
 
--record(cache_condition, {
-          expire          = 0  :: integer(),          %% specified per sec
-          max_content_len = 0  :: integer(),          %% No cache if Content-Length of a response header was &gt this
-          content_types   = [] :: list() | undefined, %% like ["image/png", "image/gif", "image/jpeg"]
-          path_patterns   = [] :: list() | undefined, %% compiled regular expressions
-          sending_chunked_obj_len = 0 :: pos_integer()%% sending chunk length
-         }).
+-type(range_header() :: string() |
+                        undefined).
+
+-type(transfer_decode_fun() :: function() |
+                               undefined).
+
+-type(transfer_decode_state() :: #aws_chunk_decode_state{} |
+                                 undefined).
+
+
+-record(req_params, {handler :: atom(),              %% http-handler
+                     path = <<>> :: binary(),        %% path (uri)
+                     bucket_name = <<>> :: binary(), %% bucket-name (for s3-api)
+                     bucket_info :: term(),          %% bucket (for s3-api)
+                     redundancy_method :: atom(),    %% redundancy method
+                     ec_method :: ec_method(),       %% erasure-coding method
+                     ec_params :: ec_params(),       %% erasure-coding params
+                     access_key_id = <<>> :: binary(),      %% s3's access-key-id
+                     token_length = 0 :: non_neg_integer(), %% length of tokened path
+                     min_layers = 0 :: non_neg_integer(),   %% acceptable # of min layers
+                     max_layers = 0 :: non_neg_integer(),   %% acceptable # of max layers
+                     custom_header_settings :: custom_header_settings(), %% http custom header settings
+                     timeout_for_header = 1 :: pos_integer(),      %% Timeout for reading header
+                     timeout_for_body= 1 :: pos_integer(),         %% Timeout for reading body
+                     sending_chunked_obj_len = 1 :: pos_integer(), %% sending chunk length
+                     qs_prefix = <<>> :: binary() | none,          %% query string
+                     range_header :: range_header(),               %% range header
+                     custom_metadata = <<>> :: binary(),           %% custom-metadata
+                     has_inner_cache = false :: boolean(),         %% has inner-cache?
+                     has_disk_cache = false :: boolean(),          %% has disk cache?
+                     is_cached = false :: boolean(),               %% is cached?
+                     is_dir = false :: boolean(),                  %% is directory?
+                     is_location = false :: boolean(),             %% is location?
+                     is_multi_delete = false :: boolean(),         %% is multi delete request?
+                     %% for multipart upload
+                     dont_abort_cleanup = false :: boolean(),      %% whether removing related objects when handling abort MU request
+                     %% for large-object
+                     is_upload = false :: boolean(),               %% is upload operation? (for multipart upload)
+                     is_aws_chunked = false :: boolean(),          %% is AWS Chunked? (Signature V4)
+                     is_acl = false :: boolean(),                  %% is acl operation?
+                     ia_location = false :: boolean(),             %% is location operation?
+                     upload_id = <<>> :: binary(),                 %% upload id for multipart upload
+                     upload_part_num = 0 :: non_neg_integer(),     %% upload part number for multipart upload
+                     max_chunked_objs = 0 :: non_neg_integer(),    %% max chunked objects
+                     max_len_for_multipart = 0 :: non_neg_integer(), %% max length a multipart object (byte)
+                     max_len_of_obj = 0 :: non_neg_integer(),        %% max length a object (byte)
+                     chunked_obj_len = 0 :: non_neg_integer(),         %% chunked object length for large-object (byte)
+                     reading_chunked_obj_len = 0 :: non_neg_integer(), %% creading hunked object length for large object (byte)
+                     threshold_of_chunk_len = 0 :: non_neg_integer(),  %% threshold of chunk length for large-object (byte)
+                     transfer_decode_fun :: transfer_decode_fun(),     %% transfer decode function
+                     transfer_decode_state:: transfer_decode_state(),  %% transfer decode state
+                     %% For Latency Measurement
+                     begin_time = 0               :: non_neg_integer()     %% Handle Start Time
+                    }).
+
+-record(put_req_params, {path = <<>> :: binary(),
+                         body = <<>> :: binary(),
+                         meta = <<>> :: binary(),
+                         msize = 0 :: non_neg_integer(),
+                         dsize = 0 :: non_neg_integer(),
+                         total_chunks = 0 :: non_neg_integer(),
+                         cindex = 0 :: non_neg_integer(),
+                         csize = 0 :: non_neg_integer(),
+                         digest = 0 :: non_neg_integer(),
+                         bucket_info = undefined :: term()|undefined
+                        }).
+
+-record(transport_record, {transport :: module(),
+                           socket :: inet:socket(),
+                           sending_chunked_obj_len :: pos_integer()
+                          }).
+
+-record(cache, {etag = 0 :: non_neg_integer(),     %% actual value is checksum
+                mtime = 0 :: non_neg_integer(),    %% gregorian_seconds
+                content_type = <<>> :: binary(),   %% from a Content-Type header
+                body = <<>> :: binary(),           %% body (value),
+                cmeta = <<>> :: binary(),          %% custom metadata
+                size = 0 :: non_neg_integer(),     %% body size
+                msize = 0 :: non_neg_integer(),    %% custom metadata size
+                file_path = "" :: file:name_all()  %% file path when this cache is stored on disk
+               }).
+
+-record(cache_condition, {expire = 0  :: integer(),                     %% specified per sec
+                          max_content_len = 0 :: integer(),             %% No cache if Content-Length of a response header was &gt this
+                          content_types = [] :: [string()] | undefined, %% like ["image/png", "image/gif", "image/jpeg"]
+                          path_patterns = [] :: [string()] | undefined, %% compiled regular expressions
+                          sending_chunked_obj_len = 1 :: pos_integer()  %% sending chunk length
+                         }).

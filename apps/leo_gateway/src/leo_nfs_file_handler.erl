@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -36,8 +36,6 @@
 -export([path_to_dir/1, path_trim_trailing_sep/1, path_relative_to_abs/1,
          binary_is_contained/2, get_disk_usage/0]).
 
--undef(DEF_SEPARATOR).
--define(DEF_SEPARATOR, <<"\n">>).
 -define(LEOFS_NUM_OF_LIST_DIR, 1000).
 
 
@@ -45,7 +43,6 @@
 %% API-1
 %% ---------------------------------------------------------------------
 %% @doc Returns true if Path refers to a file, and false otherwise.
-%%
 -spec(is_file(binary()) -> boolean()).
 is_file(Path) ->
     case leo_gateway_rpc_handler:head(Path) of
@@ -59,8 +56,7 @@ is_file(Path) ->
     end.
 
 
-%% @doc
-%% Returns true if Path refers to a directory, and false otherwise.
+%% @doc  Returns true if Path refers to a directory, and false otherwise.
 -spec(is_dir(binary()) -> boolean()).
 is_dir(Path) ->
     %% === For 1.4
@@ -79,8 +75,8 @@ is_dir(Path) ->
             false
     end.
 
+
 %% @doc
-%%
 -spec(list_dir(binary()) ->
              {ok, list(#?METADATA{})}|{error, any()}).
 list_dir(Path) ->
@@ -127,6 +123,7 @@ list_dir(Redundancies, Path, Marker,_Acc,_Modifier) ->
       find_by_parent_dir,
       [Path, <<"/">>, Marker, ?LEOFS_NUM_OF_LIST_DIR], []).
 
+
 %% @private
 list_dir_append_hidden_files(BasePath, List) ->
     NewList = lists:flatten(List),
@@ -139,7 +136,6 @@ list_dir_append_hidden_files(BasePath, List) ->
 
 
 %% @doc Rename the file SrcKey to DstKey
-%%
 -spec(rename(binary(), binary()) ->
              ok |
              {error, not_found} |
@@ -192,6 +188,7 @@ rename_2(Metadata) ->
             Error
     end.
 
+
 %% @private
 rename_large_object_1(Key, Metadata) ->
     %% Params to be applied with configurations about large object
@@ -205,6 +202,7 @@ rename_large_object_1(Key, Metadata) ->
         Error ->
             Error %% {error, ?ERR_TYPE_INTERNAL_ERROR} | {error, timeout}
     end.
+
 
 %% @private
 rename_large_object_2(Metadata) ->
@@ -373,6 +371,7 @@ write_nothing2small(Key, Start,_End, Bin) ->
             Error
     end.
 
+
 %% @doc Update the whole file which is handled as a large object in LeoFS
 %% @private
 -spec(large_obj_update(binary(), binary()) ->
@@ -536,6 +535,7 @@ read(Key, Start, End) ->
             Error
     end.
 
+
 %% @private
 read_small(Key, Start, End) ->
     case leo_gateway_rpc_handler:get(Key, Start, End) of
@@ -545,11 +545,13 @@ read_small(Key, Start, End) ->
             {error, Cause}
     end.
 
+
 %% @private
 move_curpos2head(Start, ChunkedSize, CurPos, Idx) when (CurPos + ChunkedSize - 1) < Start ->
     move_curpos2head(Start, ChunkedSize, CurPos + ChunkedSize, Idx + 1);
 move_curpos2head(_Start,_ChunkedSize, CurPos, Idx) ->
     {CurPos, Idx}.
+
 
 %% @private
 calc_pos(_StartPos, EndPos, ObjectSize) when EndPos < 0 ->
@@ -560,6 +562,7 @@ calc_pos(StartPos, 0, ObjectSize) ->
     {StartPos, ObjectSize - 1};
 calc_pos(StartPos, EndPos,_ObjectSize) ->
     {StartPos, EndPos}.
+
 
 %% @private
 read_large(_Key,_Start,_End, Total, Total, CurPos, Acc) ->
@@ -583,6 +586,7 @@ read_large(Key, Start, End, Total, Index, CurPos, Acc) ->
         {error, Cause} ->
             {error, Cause}
     end.
+
 
 %% @private
 get_chunk(_Key, Start,_End, CurPos, ChunkSize) when (CurPos + ChunkSize - 1) < Start ->
@@ -730,6 +734,7 @@ large_obj_partial_trim(Key, Index, Size) ->
             Error
     end.
 
+
 %% @private
 large_obj_delete_chunks(_Key, []) ->
     ok;
@@ -748,7 +753,6 @@ large_obj_delete_chunks(Key, [Index1|Rest]) ->
 
 
 %% @doc Convert from the file path to the path trailing '/'
-%%
 -spec(path_to_dir(binary()) ->
              binary()).
 path_to_dir(Path) ->
@@ -761,7 +765,6 @@ path_to_dir(Path) ->
 
 
 %% @doc Trim the trailing path separator
-%%
 -spec(path_trim_trailing_sep(binary()) ->
              binary()).
 path_trim_trailing_sep(Src) ->
@@ -774,7 +777,6 @@ path_trim_trailing_sep(Src) ->
 
 
 %% @doc Convert from a relative file path to a absolute one
-%%
 -spec(path_relative_to_abs(binary()) ->
              binary()).
 path_relative_to_abs(P) ->
@@ -795,7 +797,6 @@ path_relative_to_abs([Segment|Rest], Acc) ->
 
 
 %% @doc Return true if the specified binary contain _Char, and false otherwise
-%%
 -spec(binary_is_contained(binary(), char()) ->
              boolean()).
 binary_is_contained(<<>>,_Char) ->
@@ -807,7 +808,6 @@ binary_is_contained(<< _Other:8, Rest/binary >>, Char) ->
 
 
 %% @doc Return total disk usage on LeoFS in byte
-%%
 -spec(get_disk_usage() ->
              {ok, {Total::pos_integer(), Free::pos_integer()}}| {error, any()}).
 get_disk_usage() ->

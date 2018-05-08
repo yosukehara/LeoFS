@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,10 +18,6 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% ---------------------------------------------------------------------
-%% Leo Gateway - Application
-%% @doc
-%% @end
 %%======================================================================
 -module(leo_gateway_app).
 
@@ -113,7 +109,7 @@ start(_Type, _StartArgs) ->
 
     %% Launch Supervisor
     Res = leo_gateway_sup:start_link(),
-    after_process_0(Res).
+    after_process_1(Res).
 
 
 %% @spec prep_stop(_State) -> ServerRet
@@ -177,7 +173,7 @@ inspect_cluster_status(Res, Managers) ->
                     timer:apply_after(?CHECK_INTERVAL, ?MODULE,
                                       inspect_cluster_status, [ok, Managers]);
                 ?STATE_RUNNING ->
-                    ok = after_process_2(SystemConf, MembersCur, MembersPrev)
+                    ok = after_process_3(SystemConf, MembersCur, MembersPrev)
             end;
         {{ok,_SystemConf}, {error,_Cause}} ->
             timer:apply_after(?CHECK_INTERVAL, ?MODULE,
@@ -206,9 +202,9 @@ is_alive_managers([Manager|Rest]) ->
 %%--------------------------------------------------------------------
 %% @doc After process of start_link
 %% @private
--spec(after_process_0({ok, pid()} | {error, any()}) ->
+-spec(after_process_1({ok, pid()} | {error, any()}) ->
              {ok, pid()} | {error, any()}).
-after_process_0({ok, Pid}) ->
+after_process_1({ok, Pid}) ->
     ok = leo_misc:init_env(),
     Managers_0  = ?env_manager_nodes(leo_gateway),
     Managers_1 = lists:map(fun(X) when is_list(X) ->
@@ -219,11 +215,11 @@ after_process_0({ok, Pid}) ->
 
     case is_alive_managers(Managers_1) of
         true ->
-            case catch after_process_1(Pid, Managers_1) of
+            case catch after_process_2(Pid, Managers_1) of
                 {ok, Pid} ->
                     {ok, Pid};
                 {_, Cause} ->
-                    ?error("after_process_0/1", [{cause, Cause}]),
+                    ?error("after_process_1/1", [{cause, Cause}]),
                     init:stop()
             end;
         false ->
@@ -232,13 +228,13 @@ after_process_0({ok, Pid}) ->
                     {cause, "Not alive managers"}]),
             init:stop()
     end;
-after_process_0(Error) ->
+after_process_1(Error) ->
     io:format("~p:~s,~w - cause:~p~n", [?MODULE, "after_process/1", ?LINE, Error]),
     init:stop().
 
 
 %% @private
-after_process_1(Pid, Managers) ->
+after_process_2(Pid, Managers) ->
     %% Launch leo_tran
     application:ensure_started(leo_tran),
 
@@ -365,21 +361,21 @@ after_process_1(Pid, Managers) ->
                 leo_gateway_sup, {leo_cache_sup,
                                   {leo_cache_sup, start_link,
                                    []}, permanent, 2000, worker, [leo_cache_sup]}),
-    NumOfCacheWorkers     = HttpOptions#http_options.cache_workers,
-    CacheRAMCapacity      = HttpOptions#http_options.cache_ram_capacity,
-    CacheDiscCapacity     = HttpOptions#http_options.cache_disc_capacity,
+    NumOfCacheWorkers = HttpOptions#http_options.cache_workers,
+    CacheRAMCapacity = HttpOptions#http_options.cache_ram_capacity,
+    CacheDiscCapacity = HttpOptions#http_options.cache_disc_capacity,
     CacheDiscThresholdLen = HttpOptions#http_options.cache_disc_threshold_len,
-    CacheDiscDirData      = HttpOptions#http_options.cache_disc_dir_data,
-    CacheDiscDirJournal   = HttpOptions#http_options.cache_disc_dir_journal,
-    ok = leo_cache_api:start([{?PROP_RAM_CACHE_NAME,           ?DEF_PROP_RAM_CACHE},
-                              {?PROP_RAM_CACHE_WORKERS,        NumOfCacheWorkers},
-                              {?PROP_RAM_CACHE_SIZE,           CacheRAMCapacity},
-                              {?PROP_DISC_CACHE_NAME,          ?DEF_PROP_DISC_CACHE},
-                              {?PROP_DISC_CACHE_WORKERS,       NumOfCacheWorkers},
-                              {?PROP_DISC_CACHE_SIZE,          CacheDiscCapacity},
+    CacheDiscDirData = HttpOptions#http_options.cache_disc_dir_data,
+    CacheDiscDirJournal = HttpOptions#http_options.cache_disc_dir_journal,
+    ok = leo_cache_api:start([{?PROP_RAM_CACHE_NAME, ?DEF_PROP_RAM_CACHE},
+                              {?PROP_RAM_CACHE_WORKERS, NumOfCacheWorkers},
+                              {?PROP_RAM_CACHE_SIZE, CacheRAMCapacity},
+                              {?PROP_DISC_CACHE_NAME, ?DEF_PROP_DISC_CACHE},
+                              {?PROP_DISC_CACHE_WORKERS, NumOfCacheWorkers},
+                              {?PROP_DISC_CACHE_SIZE, CacheDiscCapacity},
                               {?PROP_DISC_CACHE_THRESHOLD_LEN, CacheDiscThresholdLen},
-                              {?PROP_DISC_CACHE_DATA_DIR,      CacheDiscDirData},
-                              {?PROP_DISC_CACHE_JOURNAL_DIR,   CacheDiscDirJournal}
+                              {?PROP_DISC_CACHE_DATA_DIR, CacheDiscDirData},
+                              {?PROP_DISC_CACHE_JOURNAL_DIR, CacheDiscDirJournal}
                              ]),
 
     %% Large Object Worker Pool
@@ -420,9 +416,9 @@ after_process_1(Pid, Managers) ->
 
 %% @doc After process of start_link
 %% @private
--spec(after_process_2(#?SYSTEM_CONF{}, list(#member{}), list(#member{})) ->
+-spec(after_process_3(#?SYSTEM_CONF{}, list(#member{}), list(#member{})) ->
              ok).
-after_process_2(SystemConf, MembersCur, MembersPrev) ->
+after_process_3(SystemConf, MembersCur, MembersPrev) ->
     %% Launch Redundant-manager#2
     Managers    = ?env_manager_nodes(leo_gateway),
     NewManagers = lists:map(fun(X) when is_list(X) ->

@@ -2,7 +2,7 @@
 %%
 %% LeoFS Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,10 +18,6 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% -------------------------------------------------------------------
-%% LeoFS Gateway - S3 domainogics Test
-%% @doc
-%% @end
 %%====================================================================
 -module(leo_gateway_web_tests).
 
@@ -352,7 +348,8 @@ get_bucket_list_normal1_([_TermFun, _Node0, Node1]) ->
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC,Body}} =
                     httpc:request(get, {lists:append(["http://",
-                                                      ?TARGET_HOST, ":12345/a/b/?prefix=pre&delimiter=/"]), [{"Date", Date}]},
+                                                      ?TARGET_HOST,
+                                                      ":12345/a/b/?prefix=pre&delimiter=/"]), [{"Date", Date}]},
                                   [], [{full_result, false}]),
                 ?assertEqual(200, SC),
                 {_XmlDoc, Rest} = xmerl_scan:string(Body),
@@ -387,7 +384,9 @@ get_bucket_acl_normal1_([_TermFun, _Node0,_Node1]) ->
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC,Body}} =
                     httpc:request(get, {lists:append(["http://",
-                                                      ?TARGET_HOST, ":12345/bucket?acl"]), [{"Date", Date}, {"Authorization","AWS auth:hoge"}]},
+                                                      ?TARGET_HOST,
+                                                      ":12345/bucket?acl"]),
+                                        [{"Date", Date}, {"Authorization","AWS auth:hoge"}]},
                                   [], [{full_result, false}]),
                 ?assertEqual(200, SC),
                 {_XmlDoc, Rest} = xmerl_scan:string(Body),
@@ -481,7 +480,8 @@ head_object_normal1_([_TermFun, _Node0, Node1]) ->
                 {ok, {{_, SC, _}, Headers, _Body}} =
                     httpc:request(head, {lists:append(["http://",
                                                        ?TARGET_HOST,
-                                                       ":12345/a/b/c/d.png"]), [{"Date", Date}, {"connection", "close"}]}, [], []),
+                                                       ":12345/a/b/c/d.png"]),
+                                         [{"Date", Date}, {"connection", "close"}]}, [], []),
                 %% https://github.com/leo-project/leofs/issues/489#issuecomment-265389401
                 %% exists only content-length header
                 ?assertEqual({"content-length", "16384"}, lists:keyfind("content-length", 1, Headers)),
@@ -508,7 +508,8 @@ get_object_error_([_TermFun, _Node0, Node1]) ->
                 {ok, {SC, Body}} =
                     httpc:request(get, {lists:append(["http://",
                                                       ?TARGET_HOST,
-                                                      ":12345/a/b.png"]), [{"Date", Date}]}, [], [{full_result, false}]),
+                                                      ":12345/a/b.png"]),
+                                        [{"Date", Date}]}, [], [{full_result, false}]),
 
                 %% req id is empty for now
                 Xml = io_lib:format(?XML_ERROR,
@@ -537,7 +538,9 @@ get_object_invalid_([_TermFun, _Node0, Node1]) ->
                 {ok, {SC, _Body}} =
                     httpc:request(head, {lists:append(["http://",
                                                        ?TARGET_HOST,
-                                                       ":12345/"]), [{"Date", Date}, {"Host", ""}]}, [{version, "HTTP/1.0"}], [{full_result, false}]),
+                                                       ":12345/"]),
+                                         [{"Date", Date}, {"Host", ""}]},
+                                  [{version, "HTTP/1.0"}], [{full_result, false}]),
 
                 ?assertEqual(400, SC)
             catch
@@ -564,7 +567,8 @@ get_object_notfound_([_TermFun, Node0, Node1]) ->
                 {ok, {SC, Body}} =
                     httpc:request(get, {lists:append(["http://",
                                                       ?TARGET_HOST,
-                                                      ":12345/a/b/c.png"]), [{"Date", Date}]}, [], [{full_result, false}]),
+                                                      ":12345/a/b/c.png"]),
+                                        [{"Date", Date}]}, [], [{full_result, false}]),
 
                 %% req id is empty for now
                 Xml = io_lib:format(?XML_ERROR,
@@ -615,7 +619,8 @@ get_object_normal1_([_TermFun, _Node0, Node1]) ->
                 {ok, {{_, SC, _}, Headers, Body}} =
                     httpc:request(get, {lists:append(["http://",
                                                       ?TARGET_HOST,
-                                                      ":12345/a/b.png"]), [{"Date", Date}, {"connection", "close"}]}, [], []),
+                                                      ":12345/a/b.png"]),
+                                        [{"Date", Date}, {"connection", "close"}]}, [], []),
                 ?assertEqual(200, SC),
                 ?assertEqual("body", Body),
                 ?assertEqual(undefined, proplists:get_value("X-From-Cache", Headers))
@@ -662,7 +667,8 @@ get_object_cmeta_normal1_([_TermFun, _Node0, Node1]) ->
                 {ok, {{_, SC, _}, Headers, Body}} =
                     httpc:request(get, {lists:append(["http://",
                                                       ?TARGET_HOST,
-                                                      ":12345/a/b.png"]), [{"Date", Date}, {"connection", "close"}]}, [], []),
+                                                      ":12345/a/b.png"]),
+                                        [{"Date", Date}, {"connection", "close"}]}, [], []),
                 ?assertEqual(200, SC),
                 ?assertEqual("body", Body),
                 ?assertEqual(undefined, proplists:get_value("X-From-Cache", Headers)),
@@ -719,7 +725,9 @@ get_object_acl_normal1_([_TermFun, _Node0, Node1]) ->
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC,Body}} =
                     httpc:request(get, {lists:append(["http://",
-                                                      ?TARGET_HOST, ":12345/bucket/object?acl"]), [{"Date", Date}, {"Authorization","AWS auth:hoge"}]},
+                                                      ?TARGET_HOST,
+                                                      ":12345/bucket/object?acl"]),
+                                        [{"Date", Date}, {"Authorization","AWS auth:hoge"}]},
                                   [], [{full_result, false}]),
                 ?assertEqual(200, SC),
                 {_XmlDoc, Rest} = xmerl_scan:string(Body),
@@ -939,7 +947,8 @@ put_object_error_metadata_too_large_([_TermFun, _Node0, _Node1]) ->
                     httpc:request(put, {lists:append(["http://",
                                                       ?TARGET_HOST,
                                                       ":12345/a/b.png"]),
-                                        [{"Date", Date}, {"Authorization","auth"}, {"x-amz-meta-test", Dummy}], "image/png", "body"},
+                                        [{"Date", Date}, {"Authorization","auth"},
+                                         {"x-amz-meta-test", Dummy}], "image/png", "body"},
                                   [], [{full_result, false}]),
                 %% req id is empty for now
                 Xml = io_lib:format(?XML_ERROR,
@@ -1031,7 +1040,8 @@ put_object_aws_chunked_([_TermFun, _Node0, Node1]) ->
                                                       ?TARGET_HOST,
                                                       ":12345/testjv4/testFile.large.one"]),
                                         [{"Date", Date},
-                                         {"authorization","AWS4-HMAC-SHA256 Credential=05236/20150706/us-east-1/s3/aws4_request, SignedHeaders=content-length, Signature=642797dcfdf817ac23b553420f52c160847d3747b2e86e5ac9d07cc5e7f60f63"},
+                                         {"authorization",
+                                          "AWS4-HMAC-SHA256 Credential=05236/20150706/us-east-1/s3/aws4_request, SignedHeaders=content-length, Signature=642797dcfdf817ac23b553420f52c160847d3747b2e86e5ac9d07cc5e7f60f63"},
                                          {"x-amz-content-sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"},
                                          {"x-amz-decoded-content-length", integer_to_list(?AWSCHUNKEDSIZE)}
                                         ], "image/png", Chunks},
@@ -1070,7 +1080,8 @@ put_object_aws_chunked_error_([_TermFun, _Node0, Node1]) ->
                                                       ?TARGET_HOST,
                                                       ":12345/testjv4/testFile.large.one"]),
                                         [{"Date", Date},
-                                         {"authorization","AWS4-HMAC-SHA256 Credential=05236/20150706/us-east-1/s3/aws4_request, SignedHeaders=content-length, Signature=642797dcfdf817ac23b553420f52c160847d3747b2e86e5ac9d07cc5e7f60f63"},
+                                         {"authorization",
+                                          "AWS4-HMAC-SHA256 Credential=05236/20150706/us-east-1/s3/aws4_request, SignedHeaders=content-length, Signature=642797dcfdf817ac23b553420f52c160847d3747b2e86e5ac9d07cc5e7f60f63"},
                                          {"x-amz-content-sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"},
                                          {"x-amz-decoded-content-length", integer_to_list(?AWSCHUNKEDSIZE)}
                                         ], "image/png", Chunks},

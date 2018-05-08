@@ -2,7 +2,7 @@
 %%
 %% LeoFS Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,10 +18,6 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% -------------------------------------------------------------------
-%% LeoFS Gateway - RPC Handler Test
-%% @doc
-%% @end
 %%====================================================================
 -module(leo_nfs_readdir_state_ets_server_tests).
 
@@ -33,6 +29,7 @@
 -define(TEST_COOKIE,    <<1,2,3,4,5,6,7,8>>).
 -define(TEST_COOKIE_2,  <<8,7,6,5,4,3,2,1>>).
 -define(TEST_COOKIE_3,  <<1,1,1,1,1,1,1,1>>).
+
 
 %%--------------------------------------------------------------------
 %% TEST
@@ -58,7 +55,7 @@ get_count() ->
 setup() ->
     ok = leo_logger_api:new("./", ?LOG_LEVEL_INFO),
     ok = leo_logger_api:new(?LOG_GROUP_ID_ACCESS, ?LOG_ID_ACCESS,
-                                    "./", ?LOG_FILENAME_ACCESS),
+                            "./", ?LOG_FILENAME_ACCESS),
     leo_nfs_readdir_state_ets_server:start_link(
       [{nfsd_readdir_scan_int, 3},
        {nfsd_readdir_entry_ttl, 10}]),
@@ -67,7 +64,7 @@ setup() ->
 setup_mem_thres() ->
     ok = leo_logger_api:new("./", ?LOG_LEVEL_INFO),
     ok = leo_logger_api:new(?LOG_GROUP_ID_ACCESS, ?LOG_ID_ACCESS,
-                                    "./", ?LOG_FILENAME_ACCESS),
+                            "./", ?LOG_FILENAME_ACCESS),
     leo_nfs_readdir_state_ets_server:start_link(
       [{nfsd_readdir_scan_int, 180},
        {nfsd_readdir_entry_ttl, 0},
@@ -77,7 +74,7 @@ setup_mem_thres() ->
 setup_zero_thres() ->
     ok = leo_logger_api:new("./", ?LOG_LEVEL_INFO),
     ok = leo_logger_api:new(?LOG_GROUP_ID_ACCESS, ?LOG_ID_ACCESS,
-                                    "./", ?LOG_FILENAME_ACCESS),
+                            "./", ?LOG_FILENAME_ACCESS),
     leo_nfs_readdir_state_ets_server:start_link(
       [{nfsd_readdir_scan_int, 180},
        {nfsd_readdir_entry_ttl, 0},
@@ -150,10 +147,9 @@ gen_entries(0, Acc, _) ->
     Acc;
 gen_entries(Cnt, Acc, TS) ->
     CntBin = integer_to_binary(Cnt),
-    Meta = #?METADATA{
-               key = <<"test/test", TS/binary, CntBin/binary>>,
-               checksum = <<"d41d8cd98f00b204e9800998ecf8427e">>
-              },
+    Meta = #?METADATA{key = <<"test/test", TS/binary, CntBin/binary>>,
+                      checksum = <<"d41d8cd98f00b204e9800998ecf8427e">>
+                     },
     gen_entries(Cnt-1, [Meta | Acc], TS).
 
 -endif.

@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway Large Object MOVE Handler
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -40,15 +40,12 @@
          terminate/2,
          code_change/3]).
 
--undef(DEF_SEPARATOR).
--define(DEF_SEPARATOR, <<"\n">>).
-
 -undef(DEF_TIMEOUT).
 -define(DEF_TIMEOUT, 30000).
 
--record(state, {key = <<>>            :: binary(),
-                max_obj_len = 0       :: non_neg_integer(),
-                iterator              :: leo_large_object_commons:iterator()
+-record(state, {key = <<>> :: binary(),
+                max_obj_len = 0 :: non_neg_integer(),
+                iterator :: leo_large_object_commons:iterator()
                }).
 
 
@@ -62,8 +59,8 @@
 start_link(Key, Length, TotalChunk) ->
     gen_server:start_link(?MODULE, [Key, Length, TotalChunk], []).
 
+
 %% @doc Stop this server
-%%
 -spec(stop(Pid) ->
              ok when Pid::pid()).
 stop(Pid) ->
@@ -71,7 +68,6 @@ stop(Pid) ->
 
 
 %% @doc Retrieve a part of chunked object from the storage cluster
-%%
 -spec(get_chunk_obj(Pid) ->
              {ok, binary()} | {error, any()} | done when Pid::pid()).
 get_chunk_obj(Pid) ->
@@ -88,6 +84,7 @@ init([Key, Length, TotalChunk]) ->
                iterator = leo_large_object_commons:iterator_init(Key, TotalChunk)},
     {ok, State}.
 
+
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 
@@ -102,14 +99,18 @@ handle_call(get_chunk_obj, _From, #state{iterator = Iter} = State) ->
             {reply, Reply, State#state{iterator = NewIterator}}
     end.
 
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
+
 
 handle_info(_Info, State) ->
     {noreply, State}.
 
+
 terminate(_Reason, _State) ->
     ok.
+
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.

@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -174,10 +174,10 @@ headers_gen() ->
 
 raw_resp_gen('head', Bucket, Path, 'ok', Body) when length(Bucket) > 0 andalso length(Path) > 0 ->
     {ok, #?METADATA{
-             del = 0,
-             timestamp = calendar:datetime_to_gregorian_seconds(calendar:universal_time()),
-             checksum = 0,
-             dsize = size(Body)}};
+                    del = 0,
+                    timestamp = calendar:datetime_to_gregorian_seconds(calendar:universal_time()),
+                    checksum = 0,
+                    dsize = size(Body)}};
 raw_resp_gen('head', _, _, 'ok', _) ->
     ok;
 raw_resp_gen('head', Bucket, Path, 'not_found', _Body) when length(Bucket) > 0 andalso length(Path) > 0 ->
@@ -191,10 +191,10 @@ raw_resp_gen('head', _, _, 'error', _Body) ->
 
 raw_resp_gen('get', Bucket, Path, 'ok', Body) when length(Bucket) > 0 andalso length(Path) > 0 ->
     {ok, #?METADATA{
-             del = 0,
-             timestamp = calendar:datetime_to_gregorian_seconds(calendar:universal_time()),
-             checksum = 0,
-             dsize = size(Body)}, Body};
+                    del = 0,
+                    timestamp = calendar:datetime_to_gregorian_seconds(calendar:universal_time()),
+                    checksum = 0,
+                    dsize = size(Body)}, Body};
 raw_resp_gen('get', _, _, 'ok', Body) ->
     {ok, [], Body};
 raw_resp_gen('get', _, _, 'not_found', _Body) ->
@@ -227,4 +227,3 @@ raw_resp_gen('delete', _, _, 'timeout', _Body) ->
     {error, timeout};
 raw_resp_gen('delete', _, _, 'error', _Body) ->
     {error, ?ERR_TYPE_INTERNAL_ERROR}.
-

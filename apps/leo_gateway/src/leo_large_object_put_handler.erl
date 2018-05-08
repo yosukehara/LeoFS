@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway Large Object PUT Handler
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -79,7 +79,6 @@ start_link(BucketInfo, Key, Length) ->
 
 
 %% @doc Stop this server
-%%
 -spec(stop(Pid) ->
              ok when Pid::pid()).
 stop(Pid) ->
@@ -87,7 +86,6 @@ stop(Pid) ->
 
 
 %% @doc Insert a chunked object into the storage cluster
-%%
 -spec(put(Pid, Bin) ->
              ok | {error, any()} when Pid::pid(),
                                       Bin::binary()).
@@ -96,7 +94,6 @@ put(Pid, Bin) ->
 
 
 %% @doc Make a rollback before all operations
-%%
 -spec(rollback(Pid) ->
              ok | {error, any()} when Pid::pid()).
 rollback(Pid) ->
@@ -104,7 +101,6 @@ rollback(Pid) ->
 
 
 %% @doc Retrieve a result
-%%
 -spec(result(Pid) ->
              ok | {error, any()} when Pid::pid()).
 result(Pid) ->

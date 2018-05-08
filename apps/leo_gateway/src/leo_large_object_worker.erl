@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway Large Object PUT Handler
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -39,6 +39,7 @@
          terminate/2,
          code_change/3]).
 
+
 %% ===================================================================
 %% API functions
 %% ===================================================================
@@ -46,6 +47,7 @@
 %% Description: Starts the server
 start_link(WorkerArgs) ->
     gen_server:start_link(?MODULE, [WorkerArgs], []).
+
 
 stop(Id) ->
     gen_server:call(Id, stop, 30000).
@@ -61,6 +63,7 @@ stop(Id) ->
 %% Description: Initiates the server
 init([WorkerArgs]) ->
     {ok, WorkerArgs}.
+
 
 handle_call(stop,_From, State) ->
     {stop, normal, ok, State};

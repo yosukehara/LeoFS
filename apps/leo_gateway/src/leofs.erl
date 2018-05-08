@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -40,7 +40,6 @@ stop() ->
 
 
 %% @doc Retrieve an object
-%%
 -spec(get(binary()) ->
              {ok, {pos_integer(), binary()}} | not_found | {error, any()}).
 get(Key) ->
@@ -66,7 +65,6 @@ get(Key) ->
 
 
 %% @doc Insert an object
-%%
 -spec(put(binary(), binary()) ->
              {ok, pos_integer()} | {error, any()}).
 put(Key, Body) ->
@@ -89,7 +87,6 @@ put(Key, Body) ->
 
 
 %% @doc Insert an object
-%%
 -spec(head(binary()) ->
              {ok, #?METADATA{}} | not_found | {error, any()}).
 head(Key) ->
@@ -102,7 +99,6 @@ head(Key) ->
 
 
 %% @doc Insert an object
-%%
 -spec(delete(binary()) ->
              ok | {error, any()}).
 delete(Key) ->

@@ -3,7 +3,7 @@
 %%
 %% LeoFS Gateway
 %%
-%% Copyright (c) 2012-2017 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -23,7 +23,7 @@
 {application, leo_gateway,
  [
   {description, "LeoFS Gateway Server"},
-  {vsn, "1.4.0"},
+  {vsn, "1.4.1"},
   {id, "leo_gateway"},
   {registered, []},
   {applications, [kernel, stdlib, crypto, ranch, asn1]},
@@ -43,7 +43,7 @@
                  %% max # of layer of directories:
                  {layer_of_dirs, {1, 12} },
                  %% ssl related:
-                 {ssl_port,     8443 },
+                 {ssl_port, 8443 },
                  {ssl_certfile, "./etc/server_cert.pem" },
                  {ssl_keyfile,  "./etc/server_key.pem" }
                 ]},
@@ -53,10 +53,10 @@
 
          %% Large-object-related properties:
          {large_object, [
-                         {max_chunked_objs,       1000 },
-                         {chunked_obj_len,        5242880 },
+                         {max_chunked_objs, 1000 },
+                         {chunked_obj_len, 5242880 },
                          {threshold_of_chunk_len, 5767168 },
-                         {reading_chunked_obj_len,5242880 }
+                         {reading_chunked_obj_len, 5242880 }
                         ]},
 
          %% Cache-related properties:
@@ -106,15 +106,10 @@
          %%         1: info
          %%         2: warning
          %%         3: error
-         {log_level,    1 },
+         {log_level, 1},
 
          %% Output Access-log?
-         {is_enable_access_log,  true },
-         {is_enable_esearch,     false },
-         {esearch_host,          "127.0.0.1" },
-         {esearch_port,          9200 },
-         {esearch_timeout,       10000 },
-         {esearch_bulk_duration, 3000 },
+         {is_enable_access_log, true },
 
          %% Log appender - [file]
          {log_appender, [

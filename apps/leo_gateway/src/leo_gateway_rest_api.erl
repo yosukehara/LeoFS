@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,10 +18,6 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% ---------------------------------------------------------------------
-%% Leo Gateway Rest-API
-%% @doc
-%% @end
 %%======================================================================
 -module(leo_gateway_rest_api).
 
@@ -65,13 +61,13 @@ handle(Req, State) ->
     {_Bucket, Key}= gen_key(Req),
     case Key of
         ?HTTP_SPECIAL_URL_HEALTH_CHECK ->
-            % /leofs_adm/ping is a special URL for health check
+            %% /leofs_adm/ping is a special URL for health check
             {ok, Req2} = case leo_gateway_http_commons:do_health_check() of
-                true ->
-                    ?reply_ok([?SERVER_HEADER], <<"OK">>, Req);
-                false ->
-                    ?reply_internal_error_without_body([?SERVER_HEADER], Req)
-            end,
+                             true ->
+                                 ?reply_ok([?SERVER_HEADER], <<"OK">>, Req);
+                             false ->
+                                 ?reply_internal_error_without_body([?SERVER_HEADER], Req)
+                         end,
             {ok, Req2, State};
         _ ->
             handle_1(Req, State, Key)

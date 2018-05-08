@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,10 +18,6 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% ---------------------------------------------------------------------
-%% Leo Gateway - Cache Statistics
-%% @doc
-%% @end
 %%======================================================================
 -module(leo_gateway_cache_statistics).
 
@@ -38,11 +34,11 @@
 -export([handle_notify/0]).
 
 
--define(SNMP_MSG_REPLICATE,  'num-of-msg-replicate').
+-define(SNMP_MSG_REPLICATE, 'num-of-msg-replicate').
 -define(SNMP_MSG_SYNC_VNODE, 'num-of-msg-sync-vnode').
--define(SNMP_MSG_REBALANCE,  'num-of-msg-rebalance').
+-define(SNMP_MSG_REBALANCE, 'num-of-msg-rebalance').
 
--define(SNMP_CACHE_HIT_COUNT,  'cache-hit-count').
+-define(SNMP_CACHE_HIT_COUNT, 'cache-hit-count').
 -define(SNMP_CACHE_MISS_COUNT, 'cache-miss-count').
 -define(SNMP_CACHE_NUM_OF_OBJ, 'cache-object-count').
 -define(SNMP_CACHE_TOTAL_SIZE, 'cache-object-size').
@@ -54,6 +50,7 @@
 start_link(Window) ->
     ok = leo_statistics_sup:start_child(?MODULE, Window),
     ok.
+
 
 %%--------------------------------------------------------------------
 %% Callback

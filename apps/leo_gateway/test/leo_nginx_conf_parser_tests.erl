@@ -2,7 +2,7 @@
 %%
 %% LeoFS Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -20,8 +20,6 @@
 %%
 %% -------------------------------------------------------------------
 %% Parser of Nginx configuration file
-%% @doc
-%% @end
 %%====================================================================
 -module(leo_nginx_conf_parser_tests).
 
@@ -36,45 +34,46 @@
 -ifdef(EUNIT).
 parse_test() ->
     TestCases = [
-            {"nginx01.conf", 
-                [{<<"/bucket_a/static_private">>, 
-                  [{<<"expires">>, <<"24h">>},
-                   {<<"add_header">>, <<"Cache-Control private">>}]
-                 },
-                 {<<"/bucket_b/static_public_frequently_changed">>, 
-                  [{<<"expires">>, <<"5m">>},
-                   {<<"add_header">>, <<"Cache-Control public">>}]
-                 }
-                ]
-            },
-            {"nginx02.conf", 
-                [{<<"/bucket_a/test.png">>, 
-                  [{<<"expires">>, <<"@24h">>},
-                   {<<"add_header">>, <<"X-Original-Header OriginalValue">>}
+                 {"nginx01.conf",
+                  [{<<"/bucket_a/static_private">>,
+                    [{<<"expires">>, <<"24h">>},
+                     {<<"add_header">>, <<"Cache-Control private">>}]
+                   },
+                   {<<"/bucket_b/static_public_frequently_changed">>,
+                    [{<<"expires">>, <<"5m">>},
+                     {<<"add_header">>, <<"Cache-Control public">>}]
+                   }
                   ]
                  },
-                 {<<"/bucket_b/urlencoded/%20%30%31%32">>, 
-                  [{<<"expires">>, <<"-1">>},
-                   {<<"add_header">>, <<"Cache-Control no-cache">>}]
-                 }
-                ]
-            },
-            {"nginx03.conf", 
-                [{<<"/bucket_a/test.png">>, 
-                  [{<<"expires">>, <<"0">>},
-                   {<<"add_header">>, <<"X-Original-Header1 OriginalValue1">>},
-                   {<<"add_header">>, <<"X-Original-Header2 OriginalValue2">>},
-                   {<<"add_header">>, <<"X-Original-Header3 OriginalValue3">>}
+                 {"nginx02.conf",
+                  [{<<"/bucket_a/test.png">>,
+                    [{<<"expires">>, <<"@24h">>},
+                     {<<"add_header">>, <<"X-Original-Header OriginalValue">>}
+                    ]
+                   },
+                   {<<"/bucket_b/urlencoded/%20%30%31%32">>,
+                    [{<<"expires">>, <<"-1">>},
+                     {<<"add_header">>, <<"Cache-Control no-cache">>}]
+                   }
                   ]
                  },
-                 {<<"/bucket_b/~reserved/">>, 
-                  [{<<"expires">>, <<"epoch">>},
-                   {<<"add_header">>, <<"Cache-Control no-cache">>}]
+                 {"nginx03.conf",
+                  [{<<"/bucket_a/test.png">>,
+                    [{<<"expires">>, <<"0">>},
+                     {<<"add_header">>, <<"X-Original-Header1 OriginalValue1">>},
+                     {<<"add_header">>, <<"X-Original-Header2 OriginalValue2">>},
+                     {<<"add_header">>, <<"X-Original-Header3 OriginalValue3">>}
+                    ]
+                   },
+                   {<<"/bucket_b/~reserved/">>,
+                    [{<<"expires">>, <<"epoch">>},
+                     {<<"add_header">>, <<"Cache-Control no-cache">>}]
+                   }
+                  ]
                  }
-                ]
-            }
-    ],
+                ],
     validate(TestCases).
+
 
 validate([]) ->
     ok;
@@ -83,6 +82,7 @@ validate([{FileName, Expected}|T]) ->
     {ok, Result} = leo_nginx_conf_parser:parse(FilePath),
     compare(Expected, Result),
     validate(T).
+
 
 compare([], _) ->
     ok;
@@ -97,6 +97,7 @@ compare_pairlist([{ExpKey, ExpVal}|ET], ResultPairList) ->
     RetList = proplists:lookup_all(ExpKey, ResultPairList),
     ?assertEqual(true, is_exist(ExpVal, RetList)),
     compare_pairlist(ET, ResultPairList).
+
 
 is_exist(_Val, []) ->
     false;

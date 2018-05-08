@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,12 +18,18 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% ---------------------------------------------------------------------
-%% Leo Gateway - RPC-Handler
-%% @doc
-%% @end
 %%======================================================================
 -module(leo_gateway_rpc_handler).
+
+-include("leo_http.hrl").
+-include("leo_gateway.hrl").
+-include_lib("leo_logger/include/leo_logger.hrl").
+-include_lib("leo_object_storage/include/leo_object_storage.hrl").
+-include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
+-undef(MAX_RETRY_TIMES).
+-include_lib("leo_statistics/include/leo_statistics.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -export([head/1,
          get/1,
@@ -36,26 +42,14 @@
          get_request_parameters/2
         ]).
 
--include("leo_http.hrl").
--include("leo_gateway.hrl").
--include_lib("leo_logger/include/leo_logger.hrl").
--include_lib("leo_object_storage/include/leo_object_storage.hrl").
--include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
--include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
--undef(MAX_RETRY_TIMES).
--include_lib("leo_statistics/include/leo_statistics.hrl").
--include_lib("eunit/include/eunit.hrl").
-
--record(rpc_params, {
-          req_id = 0  :: non_neg_integer(),
-          timestamp = 0  :: non_neg_integer(),
-          addr_id = 0  :: non_neg_integer(),
-          redundancies = [] :: [#redundant_node{}]
-         }).
+-record(rpc_params, {req_id = 0 :: non_neg_integer(),
+                     timestamp = 0 :: non_neg_integer(),
+                     addr_id = 0 :: non_neg_integer(),
+                     redundancies = [] :: [#redundant_node{}]
+                    }).
 
 
 %% @doc Retrieve a metadata from the storage-cluster
-%%
 -spec(head(binary()) ->
              {ok, #?METADATA{}}|{error, any()}).
 head(Key) ->
@@ -66,8 +60,8 @@ head(Key) ->
            [ReqParams#rpc_params.addr_id, Key],
            []).
 
+
 %% @doc Retrieve an object from the storage-cluster
-%%
 -spec(get(binary()) ->
              {ok, #?METADATA{}, binary()}|{error, any()}).
 get(Key) ->
@@ -102,8 +96,8 @@ get(Key, StartPos, EndPos) ->
             ReqParams#rpc_params.req_id],
            []).
 
+
 %% @doc Retrieve a directory metadata encoded into binary from the storage-cluster
-%%
 -spec(get_dir_meta(binary()) ->
              {ok, binary()}|{error, any()}).
 get_dir_meta(Key) ->
@@ -116,7 +110,6 @@ get_dir_meta(Key) ->
 
 
 %% @doc Remove an object from storage-cluster
-%%
 -spec(delete(binary()) ->
              ok|{error, any()}).
 delete(Key) ->
@@ -197,7 +190,6 @@ put(#put_req_params{path = Key,
 
 
 %% @doc Do invoke rpc calls with handling retries
-%%
 -spec(invoke(list(), atom(), atom(), list(), list()) ->
              ok|{ok, any()}|{ok, #?METADATA{}, binary()}|{error, any()}).
 invoke([], _Mod, _Method, _Args, Errors) ->
@@ -255,8 +247,8 @@ invoke([#redundant_node{node = Node,
             {error, handle_error(Node, Mod, Method, Args, Error)}
     end.
 
+
 %% @doc Get request parameters
-%%
 -spec(get_request_parameters(atom(), binary()) ->
              #rpc_params{}).
 get_request_parameters(Method, Key) ->
@@ -278,7 +270,6 @@ get_request_parameters(Method, Key) ->
 
 
 %% @doc Error messeage filtering
-%%
 error_filter([not_found|_])          -> not_found;
 error_filter([{error, not_found}|_]) -> not_found;
 error_filter([H|T])                  -> error_filter(T, H).
@@ -289,7 +280,6 @@ error_filter([_H|T],                Prev) -> error_filter(T, Prev).
 
 
 %% @doc Handle an error response
-%%
 handle_error(_Node,_Mod,_Method,_Args, {error, not_found = Error}) ->
     Error;
 handle_error(_Node,_Mod,_Method,_Args, {error, unavailable = Error}) ->
@@ -312,7 +302,6 @@ handle_error(Node, Mod, Method, _Args, timeout = Cause) ->
 
 
 %% @doc Timeout depends on length of an object
-%%
 timeout(Len) when ?TIMEOUT_L1_LEN > Len -> ?env_timeout_level_1();
 timeout(Len) when ?TIMEOUT_L2_LEN > Len -> ?env_timeout_level_2();
 timeout(Len) when ?TIMEOUT_L3_LEN > Len -> ?env_timeout_level_3();

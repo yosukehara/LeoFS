@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,10 +18,6 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% ---------------------------------------------------------------------
-%% Leo Gateway - HTTP Request Handler
-%% @doc
-%% @end
 %%======================================================================
 -module(leo_gateway_http_req_handler).
 
@@ -74,6 +70,7 @@ handle(?HTTP_HEAD, Req, Key, #req_params{is_dir = true,
                                          handler = Handler} = Params) ->
     Handler:head_bucket(Req, Key, Params);
 
+
 %% ---------------------------------------------------------------------
 %% For OBJECT-OPERATION
 %% ---------------------------------------------------------------------
@@ -89,14 +86,12 @@ handle(?HTTP_GET = HTTPMethod, Req, Key, #req_params{is_cached = true,
                                                      handler = Handler} = Params) ->
     case catch leo_cache_api:get_filepath(Key) of
         {ok, CacheMeta} when CacheMeta#cache_meta.file_path /= [] ->
-            CachedObj = #cache{
-                           etag         = CacheMeta#cache_meta.md5,
-                           mtime        = CacheMeta#cache_meta.mtime,
-                           content_type = CacheMeta#cache_meta.content_type,
-                           body         = <<>>,
-                           size         = CacheMeta#cache_meta.size,
-                           file_path    = CacheMeta#cache_meta.file_path
-                          },
+            CachedObj = #cache{etag = CacheMeta#cache_meta.md5,
+                               mtime = CacheMeta#cache_meta.mtime,
+                               content_type = CacheMeta#cache_meta.content_type,
+                               body = <<>>,
+                               size = CacheMeta#cache_meta.size,
+                               file_path = CacheMeta#cache_meta.file_path},
             Handler:get_object_with_cache(Req, Key, CachedObj, Params);
         _ ->
             case catch leo_cache_api:get(Key) of
@@ -131,5 +126,6 @@ handle(?HTTP_HEAD, Req, Key, #req_params{handler = Handler} = Params) ->
 %% @doc invalid request.
 %% @private
 handle(_, Req, Key, _) ->
-    ?reply_bad_request([?SERVER_HEADER], ?XML_ERROR_CODE_InvalidArgument, ?XML_ERROR_MSG_InvalidArgument, Key, <<>>, Req).
+    ?reply_bad_request([?SERVER_HEADER], ?XML_ERROR_CODE_InvalidArgument,
+                       ?XML_ERROR_MSG_InvalidArgument, Key, <<>>, Req).
 

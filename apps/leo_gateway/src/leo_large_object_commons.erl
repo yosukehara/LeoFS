@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway Large Object Common Functions
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -28,9 +28,6 @@
 
 -export([iterator_init/2, iterator_next/1, iterator_set_chunked/3]).
 -export([delete_chunked_objects/1]).
-
--undef(DEF_SEPARATOR).
--define(DEF_SEPARATOR, <<"\n">>).
 
 -record(iterator, {origin_key = <<>> :: binary(),
                    origin_total_len = 0 :: non_neg_integer(),
@@ -61,6 +58,7 @@ delete_chunked_objects(Key) ->
     end,
     ok.
 
+
 %% @doc Initialize a iterator for keys of a large object
 -spec(iterator_init(Key, Total) ->
              #iterator{} when Key  :: binary(),
@@ -68,6 +66,7 @@ delete_chunked_objects(Key) ->
 iterator_init(Key, Total) ->
     Iterator = #iterator{origin_key = Key, origin_total_len = Total},
     Iterator.
+
 
 %% @doc Retrieve a next key for the iterator
 -spec(iterator_next(Iterator) ->

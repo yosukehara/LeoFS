@@ -2,7 +2,7 @@
 %%
 %% Leo S3 Handler
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -18,10 +18,6 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
-%% ---------------------------------------------------------------------
-%% Leo Gateway S3-API
-%% @doc
-%% @end
 %%======================================================================
 -module(leo_gateway_s3_api).
 
@@ -91,7 +87,8 @@ init({_Any, http}, Req, Opts) ->
 handle(Req, State) ->
     case leo_watchdog_state:find_not_safe_items() of
         not_found ->
-            {Host,    _} = cowboy_req:host(Req),
+            {Host,_} = cowboy_req:host(Req),
+
             %% Host header must be included even if a request with HTTP/1.0
             case Host of
                 <<>> ->
@@ -104,13 +101,13 @@ handle(Req, State) ->
                             {Bucket, Path} = get_bucket_and_path(Req),
                             case Path of
                                 ?HTTP_SPECIAL_URL_HEALTH_CHECK ->
-                                    % /leofs_adm/ping is a special URL for health check
+                                                % /leofs_adm/ping is a special URL for health check
                                     {ok, Req2} = case leo_gateway_http_commons:do_health_check() of
-                                        true ->
-                                            ?reply_ok([?SERVER_HEADER], <<"OK">>, Req);
-                                        false ->
-                                            ?reply_internal_error_without_body([?SERVER_HEADER], Req)
-                                    end,
+                                                     true ->
+                                                         ?reply_ok([?SERVER_HEADER], <<"OK">>, Req);
+                                                     false ->
+                                                         ?reply_internal_error_without_body([?SERVER_HEADER], Req)
+                                                 end,
                                     {ok, Req2, State};
                                 _ ->
                                     handle_1(Req, State, Bucket, Path)
@@ -158,7 +155,7 @@ check_request(Req, [CheckFun|Rest]) ->
 
 %% @private
 check_bad_date(Req) ->
-    case cowboy_req:header(?HTTP_HEAD_AUTHORIZATION, Req) of
+    case cowboy_req:header(?HTTP_HEADER_AUTHORIZATION, Req) of
         {undefined, _} ->
             %% no date header needed
             ok;
@@ -168,9 +165,9 @@ check_bad_date(Req) ->
 
 %% @private
 check_bad_date_1(Req) ->
-    case cowboy_req:header(?HTTP_HEAD_DATE, Req) of
+    case cowboy_req:header(?HTTP_HEADER_DATE, Req) of
         {undefined, _} ->
-            case cowboy_req:header(?HTTP_HRAD_X_AMZ_DATE, Req) of
+            case cowboy_req:header(?HTTP_HEADER_X_AMZ_DATE, Req) of
                 {undefined, _} ->
                     {error, 403, ?XML_ERROR_CODE_AccessDenied, ?XML_ERROR_MSG_AccessDenied};
                 {Date, _} ->
@@ -231,7 +228,7 @@ onresponse(CacheCondition) ->
                             ReqParams::#req_params{}).
 get_bucket(Req, _Key, #req_params{is_location = true}) ->
     Header = [?SERVER_HEADER,
-              {?HTTP_HEAD_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
+              {?HTTP_HEADER_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
     ?reply_ok(Header, ?XML_BUCKET_LOCATION, Req);
 get_bucket(Req, Key, #req_params{access_key_id = AccessKeyId,
                                  is_acl = false,
@@ -278,28 +275,28 @@ get_bucket(Req, Key, #req_params{access_key_id = AccessKeyId,
                 end,
 
     Versioning = case cowboy_req:qs_val(?HTTP_QS_BIN_VERSIONING, Req) of
-                    {undefined, _} -> false;
-                    {_Val_3, _} ->
-                        true
-                end,
+                     {undefined, _} -> false;
+                     {_Val_3, _} ->
+                         true
+                 end,
 
     case Versioning of
         true ->
             ?access_log_bucket_get(Key, PrefixBin, ?HTTP_ST_OK, BeginTime),
             Header = [?SERVER_HEADER,
-                      {?HTTP_HEAD_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
+                      {?HTTP_HEADER_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
             ?reply_ok(Header, ?XML_BUCKET_VERSIONING, Req);
         false ->
             case get_bucket_1(AccessKeyId, Key, Delimiter, NormalizedMarker, MaxKeys, Prefix) of
                 {ok, XMLRet} ->
                     ?access_log_bucket_get(Key, PrefixBin, ?HTTP_ST_OK, BeginTime),
                     Header = [?SERVER_HEADER,
-                             {?HTTP_HEAD_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
+                              {?HTTP_HEADER_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
                     ?reply_ok(Header, XMLRet, Req);
                 {error, badarg} ->
                     ?access_log_bucket_get(Key, PrefixBin, ?HTTP_ST_BAD_REQ, BeginTime),
                     ?reply_bad_request([?SERVER_HEADER], ?XML_ERROR_CODE_InvalidArgument,
-                                        ?XML_ERROR_MSG_InvalidArgument, Key, <<>>, Req);
+                                       ?XML_ERROR_MSG_InvalidArgument, Key, <<>>, Req);
                 {error, not_found} ->
                     ?access_log_bucket_get(Key, PrefixBin, ?HTTP_ST_NOT_FOUND, BeginTime),
                     ?reply_not_found([?SERVER_HEADER], Key, <<>>, Req);
@@ -323,7 +320,7 @@ get_bucket(Req, Bucket, #req_params{access_key_id = _AccessKeyId,
             ?access_log_bucket_getacl(Bucket, ?HTTP_ST_OK, BeginTime),
             XML = generate_acl_xml(BucketInfo),
             Header = [?SERVER_HEADER,
-                      {?HTTP_HEAD_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
+                      {?HTTP_HEADER_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
             ?reply_ok(Header, XML, Req);
         not_found ->
             ?access_log_bucket_getacl(Bucket, ?HTTP_ST_NOT_FOUND, BeginTime),
@@ -343,7 +340,7 @@ put_bucket(Req, Key, #req_params{access_key_id = AccessKeyId,
                                  is_acl = false,
                                  begin_time = BeginTime}) ->
     Bucket = formalize_bucket(Key),
-    CannedACL = string:to_lower(binary_to_list(?http_header(Req, ?HTTP_HEAD_X_AMZ_ACL))),
+    CannedACL = string:to_lower(binary_to_list(?http_header(Req, ?HTTP_HEADER_X_AMZ_ACL))),
     %% Consume CreateBucketConfiguration
     Req_1 = case cowboy_req:has_body(Req) of
                 false ->
@@ -387,7 +384,7 @@ put_bucket(Req, Key, #req_params{access_key_id = AccessKeyId,
                                  is_acl = true,
                                  begin_time = BeginTime}) ->
     Bucket = formalize_bucket(Key),
-    CannedACL = string:to_lower(binary_to_list(?http_header(Req, ?HTTP_HEAD_X_AMZ_ACL))),
+    CannedACL = string:to_lower(binary_to_list(?http_header(Req, ?HTTP_HEADER_X_AMZ_ACL))),
     case put_bucket_acl_1(CannedACL, AccessKeyId, Bucket) of
         ok ->
             ?access_log_bucket_getacl(Bucket, CannedACL, ?HTTP_ST_OK, BeginTime),
@@ -475,7 +472,7 @@ get_object(Req, Key, #req_params{is_acl = true,
                 {ok, BucketInfo} ->
                     XML = generate_acl_xml(BucketInfo),
                     Header = [?SERVER_HEADER,
-                              {?HTTP_HEAD_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
+                              {?HTTP_HEADER_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
                     ?access_log_get_acl(Bucket, Key, ?HTTP_ST_OK, BeginTime),
                     ?reply_ok(Header, XML, Req);
                 not_found ->
@@ -513,21 +510,22 @@ get_object_with_cache(Req, Key, CacheObj, Params) ->
              Ret when Req::cowboy_req:req(),
                       Ret::binary()).
 get_x_amz_meta_directive(Req) ->
-    Directive = ?http_header(Req, ?HTTP_HEAD_X_AMZ_META_DIRECTIVE),
+    Directive = ?http_header(Req, ?HTTP_HEADER_X_AMZ_META_DIRECTIVE),
     get_x_amz_meta_directive(Req, Directive).
 
 %% @private
 get_x_amz_meta_directive(Req, ?BIN_EMPTY) ->
-    CS = ?http_header(Req, ?HTTP_HEAD_X_AMZ_COPY_SOURCE),
+    CS = ?http_header(Req, ?HTTP_HEADER_X_AMZ_COPY_SOURCE),
     case CS of
         ?BIN_EMPTY ->
             ?BIN_EMPTY;
         _ ->
             %% return default - 'copy'
-            ?HTTP_HEAD_X_AMZ_META_DIRECTIVE_COPY
+            ?HTTP_HEADER_X_AMZ_META_DIRECTIVE_COPY
     end;
 get_x_amz_meta_directive(_Req, Other) ->
     Other.
+
 
 %% @doc POST/PUT operation on Objects
 -spec(put_object(Req, Key, ReqParams) ->
@@ -565,7 +563,7 @@ put_object(?BIN_EMPTY, Req, _Key, #req_params{is_multi_delete = true,
     case cowboy_req:body(Req, BodyOpts) of
         {ok, Body, Req1} ->
             %% Check Content-MD5 with body
-            ContentMD5 = ?http_header(Req, ?HTTP_HEAD_CONTENT_MD5),
+            ContentMD5 = ?http_header(Req, ?HTTP_HEADER_CONTENT_MD5),
             CalculatedMD5 = base64:encode(crypto:hash(md5, Body)),
             delete_multi_objects_2(Req1, Body, ContentMD5, CalculatedMD5, Params);
         {error, _Cause} ->
@@ -580,7 +578,7 @@ put_object(?BIN_EMPTY, Req, Key, #req_params{bucket_name = BucketName,
             ?reply_bad_request([?SERVER_HEADER], ?XML_ERROR_CODE_InvalidArgument,
                                ?XML_ERROR_MSG_InvalidArgument, Key, <<>>, Req);
         {BodySize, _} ->
-            Size = case cowboy_req:header(?HTTP_HEAD_X_AMZ_DECODED_CONTENT_LENGTH, Req) of
+            Size = case cowboy_req:header(?HTTP_HEADER_X_AMZ_DECODED_CONTENT_LENGTH, Req) of
                        {undefined,_} ->
                            BodySize;
                        {Val,_} ->
@@ -634,7 +632,7 @@ put_object(Directive, Req, Key, #req_params{handler = ?PROTO_HANDLER_S3,
                                             bucket_name = BucketName,
                                             custom_metadata = CMetaBin1,
                                             begin_time = BeginTime} = Params) ->
-    CS = cow_qs:urldecode(?http_header(Req, ?HTTP_HEAD_X_AMZ_COPY_SOURCE)),
+    CS = cow_qs:urldecode(?http_header(Req, ?HTTP_HEADER_X_AMZ_COPY_SOURCE)),
 
     %% need to trim head '/' when cooperating with s3fs(-c)
     CS2 = case binary:part(CS, {0, 1}) of
@@ -655,7 +653,7 @@ put_object(Directive, Req, Key, #req_params{handler = ?PROTO_HANDLER_S3,
             case leo_gateway_rpc_handler:get(CS2) of
                 {ok, Meta, RespObject} ->
                     CMetaBin = case Directive of
-                                   ?HTTP_HEAD_X_AMZ_META_DIRECTIVE_COPY ->
+                                   ?HTTP_HEADER_X_AMZ_META_DIRECTIVE_COPY ->
                                        Meta#?METADATA.meta;
                                    _ ->
                                        CMetaBin1
@@ -680,6 +678,7 @@ put_object(Directive, Req, Key, #req_params{handler = ?PROTO_HANDLER_S3,
                     ?reply_timeout([?SERVER_HEADER], Key, <<>>, Req)
             end
     end.
+
 
 %% @doc POST/PUT operation on Objects. COPY
 %% @private
@@ -709,6 +708,7 @@ put_object_1(Req, Src, Key, Meta, Bin, #req_params{bucket_name = BucketName,
             ?reply_timeout([?SERVER_HEADER], Key, <<>>, Req)
     end.
 
+
 %% @doc POST/PUT operation on `Large` Objects. COPY
 %% @private
 put_large_object_1(Req, Src, Key, Meta, #req_params{bucket_name = BucketName,
@@ -723,6 +723,7 @@ put_large_object_1(Req, Src, Key, Meta, #req_params{bucket_name = BucketName,
         {error, _Other} ->
             ?reply_internal_error([?SERVER_HEADER], Key, <<>>, Req)
     end.
+
 
 %% @doc DELETE operation on Objects
 -spec(delete_object(cowboy_req:req(), binary(), #req_params{}) ->
@@ -785,7 +786,7 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
     HTTPMethod = cowboy_req:get(method, Req),
 
     {Prefix, IsDir, Path_1, Req_2} =
-        case cowboy_req:qs_val(?HTTP_HEAD_PREFIX, Req) of
+        case cowboy_req:qs_val(?HTTP_HEADER_PREFIX, Req) of
             {undefined, Req_1} ->
                 {none, (TokenLen == 1 orelse ?BIN_SLASH == BinPart), Path, Req_1};
             {BinParam, Req_1} ->
@@ -846,12 +847,12 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
                                   case AuthRet of
                                       {ok, _, SignParams} ->
                                           {Signature, SignHead, SignKey} =
-                                          case SignParams of
-                                              undefined ->
-                                                  {undefined, undefined, undefined};
-                                              _ ->
-                                                  SignParams
-                                          end,
+                                              case SignParams of
+                                                  undefined ->
+                                                      {undefined, undefined, undefined};
+                                                  _ ->
+                                                      SignParams
+                                              end,
                                           AWSChunkSignParams = #aws_chunk_sign_params{
                                                                   sign_head = SignHead,
                                                                   sign_key = SignKey,
@@ -1060,6 +1061,7 @@ handle_2({ok, AccessKeyId}, Req, HTTPMethod, Path, Params, State) ->
             {ok, Req_3, State}
     end.
 
+
 %% @private
 -spec(abort_multipart_upload(Path) ->
              ok | {error, Cause} when Path::binary(),
@@ -1073,6 +1075,7 @@ abort_multipart_upload_1({error, not_found}, Path) ->
     leo_gateway_rpc_handler:delete(<< Path/binary, ?STR_NEWLINE >>);
 abort_multipart_upload_1({error, _} = Error, _Path) ->
     Error.
+
 
 %% @private
 -spec(aws_chunk_decode(Bin, State) ->
@@ -1322,7 +1325,6 @@ handle_multi_upload_2({error, Cause}, Req, Path,_ChunkedLen,_BucketInfo, _CMetaB
     ?error("handle_multi_upload_2/5", [{key, binary_to_list(Path)}, {cause, Cause}]),
     ?reply_internal_error([?SERVER_HEADER], Path, <<>>, Req).
 
-
 %% @doc Retrieve Metadatas for uploaded objects (Multipart)
 %% @private
 -spec(handle_multi_upload_3(PartNum, Path, Acc) ->
@@ -1361,12 +1363,11 @@ handle_multi_upload_3(PartNum, Path, Acc) ->
              Key when Path::binary(),
                       Key::string()).
 gen_upload_key(Path) ->
-    Key = lists:foldl(fun(I, []) ->
-                              binary_to_list(I);
-                         (I, Acc) ->
-                              Acc ++ ?STR_SLASH ++ binary_to_list(I)
-                      end, [], Path),
-    Key.
+    lists:foldl(fun(I, []) ->
+                        binary_to_list(I);
+                   (I, Acc) ->
+                        Acc ++ ?STR_SLASH ++ binary_to_list(I)
+                end, [], Path).
 
 
 %% @doc Generate an update-initiate xml
@@ -1407,7 +1408,7 @@ resp_copy_obj_xml(Req, Meta) ->
                         [leo_http:web_date(Meta#?METADATA.timestamp),
                          leo_hex:integer_to_hex(Meta#?METADATA.checksum, 32)]),
     ?reply_ok([?SERVER_HEADER,
-               {?HTTP_HEAD_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}
+               {?HTTP_HEADER_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}
               ], XML, Req).
 
 
@@ -1442,10 +1443,10 @@ request_params(Req, Params) ->
                   {Val_2,_} ->
                       list_to_integer(binary_to_list(Val_2))
               end,
-    Range = element(1, cowboy_req:header(?HTTP_HEAD_RANGE, Req)),
+    Range = element(1, cowboy_req:header(?HTTP_HEADER_RANGE, Req)),
 
-    IsAwsChunked = case cowboy_req:header(?HTTP_HEAD_X_AMZ_CONTENT_SHA256, Req) of
-                       {?HTTP_HEAD_X_VAL_AWS4_SHA256,_} ->
+    IsAwsChunked = case cowboy_req:header(?HTTP_HEADER_X_AMZ_CONTENT_SHA256, Req) of
+                       {?HTTP_HEADER_X_VAL_AWS4_SHA256,_} ->
                            true;
                        _ ->
                            false
@@ -1594,14 +1595,14 @@ auth(Req, HTTPMethod, Path, TokenLen, BucketName, ACLs, ReqParams) when TokenLen
 
 %% @private
 auth_1(Req, HTTPMethod, Path, TokenLen, BucketName, _ACLs, #req_params{is_acl = IsACL}) ->
-    case cowboy_req:header(?HTTP_HEAD_AUTHORIZATION, Req) of
+    case cowboy_req:header(?HTTP_HEADER_AUTHORIZATION, Req) of
         {undefined, _} ->
             {error, undefined};
         {AuthorizationBin, _} ->
             case AuthorizationBin of
                 << Head:4/binary,
-                   _Rest/binary >> when Head =:= ?HTTP_HEAD_X_AWS_SIGNATURE_V2;
-                                        Head =:= ?HTTP_HEAD_X_AWS_SIGNATURE_V4 ->
+                   _Rest/binary >> when Head =:= ?HTTP_HEADER_X_AWS_SIGNATURE_V2;
+                                        Head =:= ?HTTP_HEADER_X_AWS_SIGNATURE_V4 ->
                     IsCreateBucketOp = (TokenLen == 1 andalso
                                         HTTPMethod == ?HTTP_PUT andalso
                                         not IsACL),
@@ -1658,7 +1659,7 @@ auth_1(Req, HTTPMethod, Path, TokenLen, BucketName, _ACLs, #req_params{is_acl = 
                                              lists:sort(string:tokens(binary_to_list(QStr_2), "&"))),
                                      list_to_binary(Ret)
                              end,
-                    SignVer = case (Head =:= ?HTTP_HEAD_X_AWS_SIGNATURE_V4) of
+                    SignVer = case (Head =:= ?HTTP_HEADER_X_AWS_SIGNATURE_V4) of
                                   true ->
                                       v4;
                                   false ->
@@ -1666,9 +1667,9 @@ auth_1(Req, HTTPMethod, Path, TokenLen, BucketName, _ACLs, #req_params{is_acl = 
                               end,
 
                     SignParams = #sign_params{http_verb = HTTPMethod,
-                                              content_md5 = ?http_header(Req, ?HTTP_HEAD_CONTENT_MD5),
-                                              content_type = ?http_header(Req, ?HTTP_HEAD_CONTENT_TYPE),
-                                              date = ?http_header(Req, ?HTTP_HEAD_DATE),
+                                              content_md5 = ?http_header(Req, ?HTTP_HEADER_CONTENT_MD5),
+                                              content_type = ?http_header(Req, ?HTTP_HEADER_CONTENT_TYPE),
+                                              date = ?http_header(Req, ?HTTP_HEADER_DATE),
                                               bucket = BucketName,
                                               raw_uri = RawURI,
                                               requested_uri = Path_1,
@@ -1919,7 +1920,6 @@ generate_bucket_xml(MetadataL) ->
           end,
     io_lib:format(?XML_BUCKET_LIST, [lists:foldl(Fun, [], MetadataL)]).
 
-
 %% @private
 generate_bucket_xml_1([],_Index,_Ref,_PathLen,_Path,_Prefix,_MaxKeys) ->
     ok;
@@ -1993,7 +1993,6 @@ generate_bucket_xml_loop(Ref, TotalDivs, CallbackFun, Acc) ->
         ?DEF_REQ_TIMEOUT ->
             {error, timeout}
     end.
-
 
 
 %% @doc Generate XML from ACL
@@ -2141,7 +2140,7 @@ delete_multi_objects_5(Req, IsQuiet, DeletedKeys, ErrorKeys, _Params) ->
     XML = generate_delete_multi_xml(IsQuiet, DeletedKeys, ErrorKeys),
     %% 6. Respond the response XML
     ?reply_ok([?SERVER_HEADER,
-               {?HTTP_HEAD_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}
+               {?HTTP_HEADER_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}
               ], XML, Req).
 
 
@@ -2255,11 +2254,12 @@ recursive_find(BucketName, Redundancies, Acc,
             end
     end.
 
+
 %% @doc parse Custom Meta from Headers
 -spec(parse_headers_to_cmeta(Headers) ->
-    {ok, Bin} | {error, Cause} when Headers::list(),
-                                    Bin::binary(),
-                                    Cause::any()).
+             {ok, Bin} | {error, Cause} when Headers::list(),
+                                             Bin::binary(),
+                                             Cause::any()).
 parse_headers_to_cmeta(Headers) when is_list(Headers) ->
     MetaList = lists:foldl(fun(Ele, Acc) ->
                                    case Ele of

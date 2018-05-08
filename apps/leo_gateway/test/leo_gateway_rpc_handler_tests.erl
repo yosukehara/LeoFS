@@ -2,7 +2,7 @@
 %%
 %% LeoFS Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -143,10 +143,10 @@ head_object_normal1_([_Node0, Node1]) ->
                                         fun(_Addr, Key) ->
                                                 {ok,
                                                  #?METADATA{
-                                                     key = Key,
-                                                     dsize = 10,
-                                                     del = 0
-                                                    }
+                                                            key = Key,
+                                                            dsize = 10,
+                                                            del = 0
+                                                           }
                                                 }
                                         end]),
     KEY = <<"bucket/key">>,
@@ -191,12 +191,12 @@ get_object_normal1_([_Node0, Node1]) ->
                                         fun(_Addr, Key, _ReqId) ->
                                                 {ok,
                                                  #?METADATA{
-                                                     key = Key,
-                                                     meta = CMetaBin,
-                                                     msize = byte_size(CMetaBin),
-                                                     dsize = 4,
-                                                     del = 0
-                                                    },
+                                                            key = Key,
+                                                            meta = CMetaBin,
+                                                            msize = byte_size(CMetaBin),
+                                                            dsize = 4,
+                                                            del = 0
+                                                           },
                                                  <<"body">>
                                                 }
                                         end]),
@@ -244,12 +244,12 @@ get_object_with_etag_normal1_([_Node0, Node1]) ->
                                         fun(_Addr, Key, _Etag, _ReqId) ->
                                                 {ok,
                                                  #?METADATA{
-                                                     key = Key,
-                                                     meta = CMetaBin,
-                                                     msize = byte_size(CMetaBin),
-                                                     dsize = 4,
-                                                     del = 0
-                                                    },
+                                                            key = Key,
+                                                            meta = CMetaBin,
+                                                            msize = byte_size(CMetaBin),
+                                                            dsize = 4,
+                                                            del = 0
+                                                           },
                                                  <<"body">>
                                                 }
                                         end]),
