@@ -29,10 +29,10 @@
 
 %% HTTP-RELATED
 -define(SERVER_HEADER, {<<"server">>,<<"LeoFS">>}).
--define(STR_NEWLINE,   "\n").
--define(STR_SLASH,     "/").
--define(BIN_SLASH,     <<"/">>).
--define(BIN_EMPTY,     <<>>).
+-define(STR_NEWLINE, "\n").
+-define(STR_SLASH, "/").
+-define(BIN_SLASH, <<"/">>).
+-define(BIN_EMPTY, <<>>).
 
 -undef(DEF_SEPARATOR).
 -define(DEF_SEPARATOR, <<"\n">>).
@@ -75,6 +75,13 @@
 -define(HTTP_HEADER_X_AMZ_DATE, <<"x-amz-date">>).
 -define(HTTP_HEADER_X_AMZ_META_DIRECTIVE_COPY, <<"COPY">>).
 -define(HTTP_HEADER_X_AMZ_META_DIRECTIVE_REPLACE, <<"REPLACE">>).
+-define(HTTP_HEADER_X_AMZ_SSEC_ALGORITHM, <<"x-amz-server-side-encryption-customer-algorithm">>).
+-define(HTTP_HEADER_X_AMZ_SSEC_KEY, <<"x-amz-server-side-encryption-customer-key">>).
+-define(HTTP_HEADER_X_AMZ_SSEC_KEY_MD5, <<"x-amz-server-side-encryption-customer-key-MD5">>).
+-define(HTTP_HEADER_X_AMZ_COPY_SRC_SSEC_ALGORITHM, <<"x-amz-copy-source-server-side-encryption-customer-algorithm">>).
+-define(HTTP_HEADER_X_AMZ_COPY_SRC_SSEC_KEY, <<"x-amz-copy-source-server-side-encryption-customer-key">>).
+-define(HTTP_HEADER_X_AMZ_COPY_SRC_SSEC_KEY_MD5, <<"x-amz-copy-source-server-side-encryption-customer-key-MD5">>).
+
 -define(HTTP_HEADER_X_FROM_CACHE, <<"x-from-cache">>).
 
 
