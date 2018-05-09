@@ -234,59 +234,18 @@ get_bucket(Req, Key, #req_params{access_key_id = AccessKeyId,
                                  is_acl = false,
                                  qs_prefix = Prefix,
                                  begin_time = BeginTime}) ->
-    NormalizedMarker = case cowboy_req:qs_val(?HTTP_QS_BIN_MARKER, Req) of
-                           {undefined,_} ->
-                               <<>>;
-                           {Marker,_} ->
-                               %% Normalize Marker
-                               %% Append $BucketName/ at the beginning of Marker as necessary
-                               KeySize = size(Key),
-                               case binary:match(Marker, Key) of
-                                   {0, KeySize} ->
-                                       Marker;
-                                   _Other ->
-                                       << Key/binary, Marker/binary >>
-                               end
-                       end,
-    MaxKeys = case cowboy_req:qs_val(?HTTP_QS_BIN_MAXKEYS, Req) of
-                  {undefined, _} ->
-                      ?DEF_S3API_MAX_KEYS;
-                  {Val_2,     _} ->
-                      try
-                          MaxKeys1 = binary_to_integer(Val_2),
-                          erlang:min(MaxKeys1, ?HTTP_MAXKEYS_LIMIT)
-                      catch _:_ ->
-                              ?DEF_S3API_MAX_KEYS
-                      end
-              end,
-    Delimiter = case cowboy_req:qs_val(?HTTP_QS_BIN_DELIMITER, Req) of
-                    {undefined, _} -> none;
-                    {Val, _} ->
-                        Val
-                end,
+    {NormalizedMarker,_} = get_qs_val(?HTTP_QS_BIN_MARKER, Req, <<>>),
+    {MaxKeys,_} = get_qs_val(?HTTP_QS_BIN_MAXKEYS, Req, ?DEF_S3API_MAX_KEYS),
+    {Delimiter,_} = get_qs_val(?HTTP_QS_BIN_DELIMITER, Req, none),
+    PrefixBin = get_prefix(Prefix),
 
-    PrefixBin = case Prefix of
-                    none ->
-                        <<>>;
-                    true ->
-                        <<>>;
-                    _ ->
-                        Prefix
-                end,
-
-    Versioning = case cowboy_req:qs_val(?HTTP_QS_BIN_VERSIONING, Req) of
-                     {undefined, _} -> false;
-                     {_Val_3, _} ->
-                         true
-                 end,
-
-    case Versioning of
-        true ->
+    case get_qs_val(?HTTP_QS_BIN_VERSIONING, Req, false) of
+        {true,_} ->
             ?access_log_bucket_get(Key, PrefixBin, ?HTTP_ST_OK, BeginTime),
             Header = [?SERVER_HEADER,
                       {?HTTP_HEADER_RESP_CONTENT_TYPE, ?HTTP_CTYPE_XML}],
             ?reply_ok(Header, ?XML_BUCKET_VERSIONING, Req);
-        false ->
+        {false,_} ->
             case get_bucket_1(AccessKeyId, Key, Delimiter, NormalizedMarker, MaxKeys, Prefix) of
                 {ok, XMLRet} ->
                     ?access_log_bucket_get(Key, PrefixBin, ?HTTP_ST_OK, BeginTime),
@@ -785,27 +744,22 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
     TokenLen = length(binary:split(Path, [?BIN_SLASH], [global, trim])),
     HTTPMethod = cowboy_req:get(method, Req),
 
-    {Prefix, IsDir, Path_1, Req_2} =
-        case cowboy_req:qs_val(?HTTP_HEADER_PREFIX, Req) of
-            {undefined, Req_1} ->
-                {none, (TokenLen == 1 orelse ?BIN_SLASH == BinPart), Path, Req_1};
-            {BinParam, Req_1} ->
+    {Prefix, IsDir, Path_1, Req_1} =
+        case get_qs_val(?HTTP_HEADER_PREFIX, Req, none) of
+            {none = Val, NewReq} ->
+                {Val, (TokenLen == 1 orelse ?BIN_SLASH == BinPart), Path, NewReq};
+            {Val, NewReq} ->
                 NewPath = case BinPart of
                               ?BIN_SLASH ->
                                   Path;
                               _ ->
                                   << Path/binary, ?BIN_SLASH/binary >>
                           end,
-                {BinParam, true, NewPath, Req_1}
+                {Val, true, NewPath, NewReq}
         end,
+    {IsACL,_} = get_qs_val(?HTTP_QS_BIN_ACL, Req_1, false),
 
-    IsACL = case cowboy_req:qs_val(?HTTP_QS_BIN_ACL, Req_2) of
-                {undefined, _} ->
-                    false;
-                _ ->
-                    true
-            end,
-    ReqParams = request_params(Req_2,
+    ReqParams = request_params(Req_1,
                                #req_params{
                                   handler = ?MODULE,
                                   path = Path_1,
@@ -832,10 +786,10 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
                                   begin_time = BeginTime}),
     case ReqParams of
         {error, metadata_too_large} ->
-            {ok, Req_3} = ?reply_metadata_too_large([?SERVER_HEADER], Path_1, <<>>, Req_2),
+            {ok, Req_3} = ?reply_metadata_too_large([?SERVER_HEADER], Path_1, <<>>, Req_1),
             {ok, Req_3, State};
         _ ->
-            AuthRet = auth(Req_2, HTTPMethod, Path_1, TokenLen, ReqParams),
+            AuthRet = auth(Req_1, HTTPMethod, Path_1, TokenLen, ReqParams),
             AuthRet_2 = case AuthRet of
                             {error, Reason} ->
                                 {error, Reason};
@@ -873,7 +827,7 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
                               _ ->
                                   ReqParams
                           end,
-            handle_2(AuthRet_2, Req_2, HTTPMethod, Path_1, ReqParams_2, State)
+            handle_2(AuthRet_2, Req_1, HTTPMethod, Path_1, ReqParams_2, State)
     end.
 
 
@@ -1419,44 +1373,19 @@ resp_copy_obj_xml(Req, Meta) ->
              ReqParams when Req::cowboy_req:req(),
                             ReqParams::#req_params{}).
 request_params(Req, Params) ->
-    IsMultiDelete = case cowboy_req:qs_val(?HTTP_QS_BIN_MULTI_DELETE, Req) of
-                        {undefined,_} ->
-                            false;
-                        _ ->
-                            true
-                    end,
-    IsUpload = case cowboy_req:qs_val(?HTTP_QS_BIN_UPLOADS, Req) of
-                   {undefined,_} ->
-                       false;
-                   _ ->
-                       true
-               end,
-    UploadId = case cowboy_req:qs_val(?HTTP_QS_BIN_UPLOAD_ID, Req) of
-                   {undefined,_} ->
-                       <<>>;
-                   {Val_1,_} ->
-                       Val_1
-               end,
-    PartNum = case cowboy_req:qs_val(?HTTP_QS_BIN_PART_NUMBER, Req) of
-                  {undefined,_} ->
-                      0;
-                  {Val_2,_} ->
-                      list_to_integer(binary_to_list(Val_2))
-              end,
-    Range = element(1, cowboy_req:header(?HTTP_HEADER_RANGE, Req)),
+    {IsMultiDelete,_} = get_qs_val(?HTTP_QS_BIN_MULTI_DELETE, Req, false),
+    {IsUpload,_} = get_qs_val(?HTTP_QS_BIN_UPLOADS, Req, false),
+    {UploadId,_} = get_qs_val(?HTTP_QS_BIN_UPLOAD_ID, Req, <<>>),
+    {PartNum,_} = get_qs_val(?HTTP_QS_BIN_PART_NUMBER, Req, 0),
+    {IsLocation,_} = get_qs_val(?HTTP_QS_BIN_LOCATION, Req, false),
 
+    Range = element(1, cowboy_req:header(?HTTP_HEADER_RANGE, Req)),
     IsAwsChunked = case cowboy_req:header(?HTTP_HEADER_X_AMZ_CONTENT_SHA256, Req) of
                        {?HTTP_HEADER_X_VAL_AWS4_SHA256,_} ->
                            true;
                        _ ->
                            false
                    end,
-    IsLocation = case cowboy_req:qs_val(?HTTP_QS_BIN_LOCATION, Req) of
-                     {undefined,_} ->
-                         false;
-                     _ ->
-                         true
-                 end,
 
     {Headers, _} = cowboy_req:headers(Req),
     {ok, CMetaBin} = parse_headers_to_cmeta(Headers),
@@ -1710,23 +1639,13 @@ get_bucket_1(AccessKeyId, ?BIN_SLASH, _Delimiter, _Marker, _MaxKeys, none) ->
             Error
     end;
 get_bucket_1(_AccessKeyId, BucketName, _Delimiter, _Marker, 0, Prefix) ->
-    Prefix_1 = case Prefix of
-                   none ->
-                       <<>>;
-                   _ ->
-                       Prefix
-               end,
+    Prefix_1 = get_prefix(Prefix),
     Path = << BucketName/binary, Prefix_1/binary >>,
     {ok, generate_bucket_xml(Path, Prefix_1, [], 0)};
 get_bucket_1(_AccessKeyId, BucketName, none, Marker, MaxKeys, Prefix) ->
     ?debug("get_bucket_1/6", "BucketName: ~p, Marker: ~p, MaxKeys: ~p, Prefix: ~p",
            [BucketName, Marker, MaxKeys, Prefix]),
-    Prefix_1 = case Prefix of
-                   none ->
-                       <<>>;
-                   _ ->
-                       Prefix
-               end,
+    Prefix_1 = get_prefix(Prefix),
 
     {ok, #redundancies{nodes = Redundancies}} =
         leo_redundant_manager_api:get_redundancies_by_key(get, BucketName),
@@ -1757,18 +1676,15 @@ get_bucket_1(_AccessKeyId, BucketName, none, Marker, MaxKeys, Prefix) ->
 get_bucket_1(_AccessKeyId, BucketName, Delimiter, Marker, MaxKeys, Prefix) ->
     ?debug("get_bucket_1/6", "BucketName: ~p, Delimiter: ~p, Marker: ~p, MaxKeys: ~p, Prefix: ~p",
            [BucketName, Delimiter, Marker, MaxKeys, Prefix]),
-
-    Prefix_1 = case Prefix of
-                   none ->
-                       <<>>;
-                   true ->
-                       <<>>;
-                   _ ->
-                       Prefix
-               end,
-
     {ok, #redundancies{nodes = Redundancies}} =
         leo_redundant_manager_api:get_redundancies_by_key(get, BucketName),
+    %% Prefix_1 = case Prefix of
+    %%                none ->
+    %%                    <<>>;
+    %%                _ ->
+    %%                    Prefix
+    %%            end
+    Prefix_1 = get_prefix(Prefix),
     Path = << BucketName/binary, Prefix_1/binary >>,
 
     case leo_gateway_rpc_handler:invoke(Redundancies,
@@ -2277,3 +2193,62 @@ parse_headers_to_cmeta(Headers) when is_list(Headers) ->
     end;
 parse_headers_to_cmeta(_) ->
     {error, badarg}.
+
+
+%% @doc Retrieve value from cowboy.request by key
+%% @private
+get_qs_val(Key, Req, Default) ->
+    case cowboy_req:qs_val(Key, Req) of
+        {undefined, Req_1} ->
+            {Default, Req_1};
+        Ret ->
+            get_qs_val_1(Ret, Key)
+    end.
+
+%% @private
+get_qs_val_1({Val, Req}, ?HTTP_QS_BIN_MARKER = Key) ->
+    %% Normalize Marker
+    %% Append $BucketName/ at the beginning of Marker as necessary
+    KeySize = size(Key),
+    case binary:match(Val, Key) of
+        {0, KeySize} ->
+            {Val, Req};
+        _ ->
+            {<< Key/binary, Val/binary >>, Req}
+    end;
+get_qs_val_1({Val, Req}, ?HTTP_QS_BIN_MAXKEYS) ->
+    try
+        MaxKeys = binary_to_integer(Val),
+        {erlang:min(MaxKeys, ?HTTP_MAXKEYS_LIMIT), Req}
+    catch
+        _:_ ->
+            {?DEF_S3API_MAX_KEYS, Req}
+    end;
+get_qs_val_1({Val, Req}, ?HTTP_QS_BIN_DELIMITER) ->
+    {Val, Req};
+get_qs_val_1({_, Req}, ?HTTP_QS_BIN_VERSIONING) ->
+    {true, Req};
+get_qs_val_1({Val, Req}, ?HTTP_HEADER_PREFIX) ->
+    {Val, Req};
+get_qs_val_1({_, Req}, ?HTTP_QS_BIN_ACL) ->
+    {true, Req};
+get_qs_val_1({_, Req}, ?HTTP_QS_BIN_MULTI_DELETE) ->
+    {true, Req};
+get_qs_val_1({_, Req}, ?HTTP_QS_BIN_UPLOADS) ->
+    {true, Req};
+get_qs_val_1({Val, Req}, ?HTTP_QS_BIN_UPLOAD_ID) ->
+    {Val, Req};
+get_qs_val_1({Val, Req}, ?HTTP_QS_BIN_PART_NUMBER) ->
+    {list_to_integer(binary_to_list(Val)), Req};
+get_qs_val_1({_, Req}, ?HTTP_QS_BIN_LOCATION) ->
+    {true, Req}.
+
+
+%% @doc Retrieve prefix except, Ignore 'none' and 'true'
+%% @private
+get_prefix(none) ->
+    <<>>;
+get_prefix(true) ->
+    <<>>;
+get_prefix(Bin) ->
+    Bin.
