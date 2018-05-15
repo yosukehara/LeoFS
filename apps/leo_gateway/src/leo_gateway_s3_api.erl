@@ -759,8 +759,7 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
         end,
     {IsACL,_} = get_qs_val(?HTTP_QS_BIN_ACL, Req_1, false),
 
-    ReqParams = request_params(Req_1,
-                               #req_params{
+    case request_params(Req_1, #req_params{
                                   handler = ?MODULE,
                                   path = Path_1,
                                   bucket_name = BucketName,
@@ -783,51 +782,44 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
                                   reading_chunked_obj_len = Props#http_options.reading_chunked_obj_len,
                                   threshold_of_chunk_len = Props#http_options.threshold_of_chunk_len,
                                   dont_abort_cleanup = Props#http_options.dont_abort_cleanup,
-                                  begin_time = BeginTime}),
-    case ReqParams of
+                                  begin_time = BeginTime}) of
         {error, metadata_too_large} ->
             {ok, Req_3} = ?reply_metadata_too_large([?SERVER_HEADER], Path_1, <<>>, Req_1),
             {ok, Req_3, State};
-        _ ->
-            AuthRet = auth(Req_1, HTTPMethod, Path_1, TokenLen, ReqParams),
-            AuthRet_2 = case AuthRet of
-                            {error, Reason} ->
-                                {error, Reason};
-                            {ok, AccessKeyId, _} ->
-                                {ok, AccessKeyId}
+        ReqParams ->
+            case auth(Req_1, HTTPMethod, Path_1, TokenLen, ReqParams) of
+                {error,_Reason} = Ret ->
+                    handle_2(Ret, Req_1, HTTPMethod, Path_1, ReqParams, State);
+                {ok, AccessKeyId, SignParams} = Ret ->
+                    ReqParams_1 =
+                        case ReqParams#req_params.is_aws_chunked of
+                            true ->
+                                {Signature, SignHead, SignKey} =
+                                    case SignParams of
+                                        undefined ->
+                                            {undefined, undefined, undefined};
+                                        _ ->
+                                            SignParams
+                                    end,
+                                AWSChunkSignParams = #aws_chunk_sign_params{
+                                                        sign_head = SignHead,
+                                                        sign_key = SignKey,
+                                                        prev_sign = Signature,
+                                                        chunk_sign = <<>>},
+                                AWSChunkDecodeState = #aws_chunk_decode_state{
+                                                         buffer = <<>>,
+                                                         dec_state = wait_size,
+                                                         chunk_offset = 0,
+                                                         sign_params = AWSChunkSignParams,
+                                                         total_len = 0},
+                                ReqParams#req_params{
+                                  transfer_decode_fun = fun aws_chunk_decode/2,
+                                  transfer_decode_state = AWSChunkDecodeState};
+                            false ->
+                                ReqParams
                         end,
-            ReqParams_2 = case ReqParams#req_params.is_aws_chunked of
-                              true ->
-                                  case AuthRet of
-                                      {ok, _, SignParams} ->
-                                          {Signature, SignHead, SignKey} =
-                                              case SignParams of
-                                                  undefined ->
-                                                      {undefined, undefined, undefined};
-                                                  _ ->
-                                                      SignParams
-                                              end,
-                                          AWSChunkSignParams = #aws_chunk_sign_params{
-                                                                  sign_head = SignHead,
-                                                                  sign_key = SignKey,
-                                                                  prev_sign = Signature,
-                                                                  chunk_sign = <<>>},
-                                          AWSChunkDecState = #aws_chunk_decode_state{
-                                                                buffer = <<>>,
-                                                                dec_state = wait_size,
-                                                                chunk_offset = 0,
-                                                                sign_params = AWSChunkSignParams,
-                                                                total_len = 0},
-                                          ReqParams#req_params{
-                                            transfer_decode_fun = fun aws_chunk_decode/2,
-                                            transfer_decode_state = AWSChunkDecState};
-                                      _ ->
-                                          ReqParams
-                                  end;
-                              _ ->
-                                  ReqParams
-                          end,
-            handle_2(AuthRet_2, Req_1, HTTPMethod, Path_1, ReqParams_2, State)
+                    handle_2({ok, AccessKeyId}, Req_1, HTTPMethod, Path_1, ReqParams_1, State)
+            end
     end.
 
 
@@ -1373,13 +1365,15 @@ resp_copy_obj_xml(Req, Meta) ->
              ReqParams when Req::cowboy_req:req(),
                             ReqParams::#req_params{}).
 request_params(Req, Params) ->
+    %% Retrieve each value from qs of cowboy.request by each key
     {IsMultiDelete,_} = get_qs_val(?HTTP_QS_BIN_MULTI_DELETE, Req, false),
     {IsUpload,_} = get_qs_val(?HTTP_QS_BIN_UPLOADS, Req, false),
     {UploadId,_} = get_qs_val(?HTTP_QS_BIN_UPLOAD_ID, Req, <<>>),
     {PartNum,_} = get_qs_val(?HTTP_QS_BIN_PART_NUMBER, Req, 0),
     {IsLocation,_} = get_qs_val(?HTTP_QS_BIN_LOCATION, Req, false),
 
-    Range = element(1, cowboy_req:header(?HTTP_HEADER_RANGE, Req)),
+    %% Retrieve each value from header of cowboy.request by each key
+    {Range,_} = cowboy_req:header(?HTTP_HEADER_RANGE, Req),
     IsAwsChunked = case cowboy_req:header(?HTTP_HEADER_X_AMZ_CONTENT_SHA256, Req) of
                        {?HTTP_HEADER_X_VAL_AWS4_SHA256,_} ->
                            true;
@@ -1387,7 +1381,16 @@ request_params(Req, Params) ->
                            false
                    end,
 
-    {Headers, _} = cowboy_req:headers(Req),
+    %% Retrieve ssec-related values
+    {SSEC_Algorithm,_} = cowboy_req:header(?HTTP_HEADER_X_AMZ_SSEC_ALGORITHM, Req, <<>>),
+    {SSEC_Key,_} = cowboy_req:header(?HTTP_HEADER_X_AMZ_SSEC_KEY, Req, <<>>),
+    {SSEC_KeyHash,_} = cowboy_req:header(?HTTP_HEADER_X_AMZ_SSEC_KEY_MD5, Req, <<>>),
+    %% @TODO Implementation of COPY w/object-encryption
+    %% {SSEC_AlgorithmCpSrc,_} = cowboy_req:header(?HTTP_HEADER_X_AMZ_SSEC_COPY_SRC_ALGORITHM, Req, <<>>),
+    %% {SSEC_KeyCpSrc,_} = cowboy_req:header(?HTTP_HEADER_X_AMZ_SSEC_COPY_SRC_KEY, Req, <<>>),
+    %% {SSEC_KeyHashCpSrc,_} = cowboy_req:header(?HTTP_HEADER_X_AMZ_SSEC_COPY_SRC_KEY_MD5, Req, <<>>),
+
+    {Headers,_} = cowboy_req:headers(Req),
     {ok, CMetaBin} = parse_headers_to_cmeta(Headers),
 
     case byte_size(CMetaBin) of
@@ -1401,7 +1404,10 @@ request_params(Req, Params) ->
                               upload_id = UploadId,
                               upload_part_num = PartNum,
                               custom_metadata = CMetaBin,
-                              range_header = Range}
+                              range_header = Range,
+                              ssec_algorithm = SSEC_Algorithm,
+                              ssec_key = SSEC_Key,
+                              ssec_key_hash = SSEC_KeyHash}
     end.
 
 
@@ -1525,9 +1531,9 @@ auth(Req, HTTPMethod, Path, TokenLen, BucketName, ACLs, ReqParams) when TokenLen
 %% @private
 auth_1(Req, HTTPMethod, Path, TokenLen, BucketName, _ACLs, #req_params{is_acl = IsACL}) ->
     case cowboy_req:header(?HTTP_HEADER_AUTHORIZATION, Req) of
-        {undefined, _} ->
+        {undefined,_} ->
             {error, undefined};
-        {AuthorizationBin, _} ->
+        {AuthorizationBin,_} ->
             case AuthorizationBin of
                 << Head:4/binary,
                    _Rest/binary >> when Head =:= ?HTTP_HEADER_X_AWS_SIGNATURE_V2;
@@ -2173,22 +2179,22 @@ recursive_find(BucketName, Redundancies, Acc,
 
 %% @doc parse Custom Meta from Headers
 -spec(parse_headers_to_cmeta(Headers) ->
-             {ok, Bin} | {error, Cause} when Headers::list(),
+             {ok, Bin} | {error, Cause} when Headers::[{binary(), binary()}],
                                              Bin::binary(),
                                              Cause::any()).
 parse_headers_to_cmeta(Headers) when is_list(Headers) ->
-    MetaList = lists:foldl(fun(Ele, Acc) ->
-                                   case Ele of
-                                       {<<"x-amz-meta-", _/binary>>, _} ->
-                                           [Ele | Acc];
-                                       _ ->
-                                           Acc
-                                   end
-                           end, [], Headers),
-    case MetaList of
+    case lists:foldl(
+           fun(Ele, Acc) ->
+                   case Ele of
+                       {<<"x-amz-meta-", _/binary>>, _} ->
+                           [Ele | Acc];
+                       _ ->
+                           Acc
+                   end
+           end, [], Headers) of
         [] ->
             {ok, <<>>};
-        _ ->
+        MetaList ->
             {ok, term_to_binary([{?PROP_CMETA_UDM, MetaList}])}
     end;
 parse_headers_to_cmeta(_) ->

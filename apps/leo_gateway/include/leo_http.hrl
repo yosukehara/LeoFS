@@ -77,10 +77,10 @@
 -define(HTTP_HEADER_X_AMZ_META_DIRECTIVE_REPLACE, <<"REPLACE">>).
 -define(HTTP_HEADER_X_AMZ_SSEC_ALGORITHM, <<"x-amz-server-side-encryption-customer-algorithm">>).
 -define(HTTP_HEADER_X_AMZ_SSEC_KEY, <<"x-amz-server-side-encryption-customer-key">>).
--define(HTTP_HEADER_X_AMZ_SSEC_KEY_MD5, <<"x-amz-server-side-encryption-customer-key-MD5">>).
--define(HTTP_HEADER_X_AMZ_COPY_SRC_SSEC_ALGORITHM, <<"x-amz-copy-source-server-side-encryption-customer-algorithm">>).
--define(HTTP_HEADER_X_AMZ_COPY_SRC_SSEC_KEY, <<"x-amz-copy-source-server-side-encryption-customer-key">>).
--define(HTTP_HEADER_X_AMZ_COPY_SRC_SSEC_KEY_MD5, <<"x-amz-copy-source-server-side-encryption-customer-key-MD5">>).
+-define(HTTP_HEADER_X_AMZ_SSEC_KEY_MD5, <<"x-amz-server-side-encryption-customer-key-md5">>).
+-define(HTTP_HEADER_X_AMZ_SSEC_COPY_SRC_ALGORITHM, <<"x-amz-copy-source-server-side-encryption-customer-algorithm">>).
+-define(HTTP_HEADER_X_AMZ_SSEC_COPY_SRC_KEY, <<"x-amz-copy-source-server-side-encryption-customer-key">>).
+-define(HTTP_HEADER_X_AMZ_SSEC_COPY_SRC_KEY_MD5, <<"x-amz-copy-source-server-side-encryption-customer-key-md5">>).
 
 -define(HTTP_HEADER_X_FROM_CACHE, <<"x-from-cache">>).
 
@@ -564,50 +564,58 @@
                                  undefined).
 
 
--record(req_params, {handler :: atom(),              %% http-handler
-                     path = <<>> :: binary(),        %% path (uri)
-                     bucket_name = <<>> :: binary(), %% bucket-name (for s3-api)
-                     bucket_info :: term(),          %% bucket (for s3-api)
-                     redundancy_method :: atom(),    %% redundancy method
-                     ec_method :: ec_method(),       %% erasure-coding method
-                     ec_params :: ec_params(),       %% erasure-coding params
-                     access_key_id = <<>> :: binary(),      %% s3's access-key-id
-                     token_length = 0 :: non_neg_integer(), %% length of tokened path
-                     min_layers = 0 :: non_neg_integer(),   %% acceptable # of min layers
-                     max_layers = 0 :: non_neg_integer(),   %% acceptable # of max layers
-                     custom_header_settings :: custom_header_settings(), %% http custom header settings
-                     timeout_for_header = 1 :: pos_integer(),      %% Timeout for reading header
-                     timeout_for_body= 1 :: pos_integer(),         %% Timeout for reading body
-                     sending_chunked_obj_len = 1 :: pos_integer(), %% sending chunk length
-                     qs_prefix = <<>> :: binary() | none,          %% query string
-                     range_header :: range_header(),               %% range header
-                     custom_metadata = <<>> :: binary(),           %% custom-metadata
-                     has_inner_cache = false :: boolean(),         %% has inner-cache?
-                     has_disk_cache = false :: boolean(),          %% has disk cache?
-                     is_cached = false :: boolean(),               %% is cached?
-                     is_dir = false :: boolean(),                  %% is directory?
-                     is_location = false :: boolean(),             %% is location?
-                     is_multi_delete = false :: boolean(),         %% is multi delete request?
-                     %% for multipart upload
-                     dont_abort_cleanup = false :: boolean(),      %% whether removing related objects when handling abort MU request
-                     %% for large-object
-                     is_upload = false :: boolean(),               %% is upload operation? (for multipart upload)
-                     is_aws_chunked = false :: boolean(),          %% is AWS Chunked? (Signature V4)
-                     is_acl = false :: boolean(),                  %% is acl operation?
-                     ia_location = false :: boolean(),             %% is location operation?
-                     upload_id = <<>> :: binary(),                 %% upload id for multipart upload
-                     upload_part_num = 0 :: non_neg_integer(),     %% upload part number for multipart upload
-                     max_chunked_objs = 0 :: non_neg_integer(),    %% max chunked objects
-                     max_len_for_multipart = 0 :: non_neg_integer(), %% max length a multipart object (byte)
-                     max_len_of_obj = 0 :: non_neg_integer(),        %% max length a object (byte)
-                     chunked_obj_len = 0 :: non_neg_integer(),         %% chunked object length for large-object (byte)
-                     reading_chunked_obj_len = 0 :: non_neg_integer(), %% creading hunked object length for large object (byte)
-                     threshold_of_chunk_len = 0 :: non_neg_integer(),  %% threshold of chunk length for large-object (byte)
-                     transfer_decode_fun :: transfer_decode_fun(),     %% transfer decode function
-                     transfer_decode_state:: transfer_decode_state(),  %% transfer decode state
-                     %% For Latency Measurement
-                     begin_time = 0               :: non_neg_integer()     %% Handle Start Time
-                    }).
+-record(req_params,
+        {handler :: atom(),              %% http-handler
+         path = <<>> :: binary(),        %% path (uri)
+         bucket_name = <<>> :: binary(), %% bucket-name (for s3-api)
+         bucket_info :: term(),          %% bucket (for s3-api)
+         redundancy_method :: atom(),    %% redundancy method
+         ec_method :: ec_method(),       %% erasure-coding method
+         ec_params :: ec_params(),       %% erasure-coding params
+         access_key_id = <<>> :: binary(),                   %% s3's access-key-id
+         token_length = 0 :: non_neg_integer(),              %% length of tokened path
+         min_layers = 0 :: non_neg_integer(),                %% acceptable # of min layers
+         max_layers = 0 :: non_neg_integer(),                %% acceptable # of max layers
+         custom_header_settings :: custom_header_settings(), %% http custom header settings
+         timeout_for_header = 1 :: pos_integer(),            %% Timeout for reading header
+         timeout_for_body= 1 :: pos_integer(),               %% Timeout for reading body
+         sending_chunked_obj_len = 1 :: pos_integer(),       %% sending chunk length
+         qs_prefix = <<>> :: binary() | none,                %% query string
+         range_header :: range_header(),                     %% range header
+         custom_metadata = <<>> :: binary(),                 %% custom-metadata
+         has_inner_cache = false :: boolean(),               %% has inner-cache?
+         has_disk_cache = false :: boolean(),                %% has disk cache?
+         is_cached = false :: boolean(),                     %% is cached?
+         is_dir = false :: boolean(),                        %% is directory?
+         is_location = false :: boolean(),                   %% is location?
+         is_multi_delete = false :: boolean(),               %% is multi delete request?
+         %% for multipart upload
+         dont_abort_cleanup = false :: boolean(),            %% whether removing related objects when handling abort Muliti-part upload
+         %% for large-object
+         is_upload = false :: boolean(),                     %% is upload operation? (for multipart upload)
+         is_aws_chunked = false :: boolean(),                %% is AWS Chunked? (Signature V4)
+         is_acl = false :: boolean(),                        %% is acl operation?
+         ia_location = false :: boolean(),                   %% is location operation?
+         upload_id = <<>> :: binary(),                       %% upload id for multipart upload
+         upload_part_num = 0 :: non_neg_integer(),           %% upload part number for multipart upload
+         max_chunked_objs = 0 :: non_neg_integer(),          %% max chunked objects
+         max_len_for_multipart = 0 :: non_neg_integer(),     %% max length a multipart object (byte)
+         max_len_of_obj = 0 :: non_neg_integer(),            %% max length a object (byte)
+         chunked_obj_len = 0 :: non_neg_integer(),           %% chunked object length for large-object (byte)
+         reading_chunked_obj_len = 0 :: non_neg_integer(),   %% creading hunked object length for large object (byte)
+         threshold_of_chunk_len = 0 :: non_neg_integer(),    %% threshold of chunk length for large-object (byte)
+         transfer_decode_fun :: transfer_decode_fun(),       %% transfer decode function
+         transfer_decode_state:: transfer_decode_state(),    %% transfer decode state
+         %% for Latency Measurement
+         begin_time = 0 :: non_neg_integer(),                %% Handle Start Time
+         %% for SSE-C
+         ssec_algorithm = <<>> :: binary(),                  %% encryption algorithm
+         ssec_key = <<>> :: binary(),                        %% 256-bit, base64-encoded encryption key
+         ssec_key_hash = <<>> :: binary(),                   %% Base64-encoded 128-bit MD5 digest of the encryption key
+         ssec_copy_src_algorithm = <<>> :: binary(),         %% (copy source) encryption algorithm
+         ssec_copy_src_key = <<>> :: binary(),               %% (copy source) 256-bit, base64-encoded encryption key
+         ssec_copy_src_key_hash = <<>> :: binary()           %% (copy source) Base64-encoded 128-bit MD5 digest of the encryption key
+        }).
 
 -record(put_req_params, {path = <<>> :: binary(),
                          body = <<>> :: binary(),
