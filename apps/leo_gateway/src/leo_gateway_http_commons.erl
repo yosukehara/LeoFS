@@ -709,6 +709,7 @@ move_large_object_1(done, #req_large_obj{handler = WriteHandler,
                              num_of_chunks = TotalChunks,
                              md5_context = Digest}} when Size == TotalSize ->
             Digest_1 = leo_hex:raw_binary_to_integer(Digest),
+            %% @TODO Object Encryption (2018-05-16)
             case leo_gateway_rpc_handler:put(#put_req_params{
                                                 path = Key,
                                                 body = ?BIN_EMPTY,

@@ -136,38 +136,18 @@ put(#put_req_params{path = Key,
                     total_chunks = TotalChunks,
                     cindex = ChunkIndex,
                     csize = ChunkedSize,
-                    digest = Digest
-                    %% === NOTE: for 1.4.0 >>>
-                    %% bucket_info = BucketInfo
-                    %% <<<
+                    digest = Digest,
+                    %% SSE-C related parameters
+                    ssec_algorithm = _SSEC_Algorithm,
+                    ssec_key = _SSEC_Key,
+                    ssec_key_hash = _SSEC_KeyHash
                    }) ->
     ok = leo_metrics_req:notify(?STAT_COUNT_PUT),
-
-    %% === NOTE: for 1.4.0 >>>
-    %% #?BUCKET{redundancy_method = RedMethod,
-    %%          cp_params = CPParams,
-    %%          ec_lib = ECLib,
-    %%          ec_params = ECParams} =
-    %%     case BucketInfo of
-    %%         undefined ->
-    %%             BucketName =
-    %%                 erlang:hd(
-    %%                   leo_misc:binary_tokens(Key, <<"/">>)),
-    %%             case catch leo_s3_bucket:get_latest_bucket(BucketName) of
-    %%                 {ok, #?BUCKET{} = BucketInfo_1} ->
-    %%                     BucketInfo_1;
-    %%                 _ ->
-    %%                     #?BUCKET{name = BucketName}
-    %%             end;
-    %%         _ ->
-    %%             BucketInfo
-    %%     end,
-    %% <<<
-
     #rpc_params{addr_id = AddrId,
                 redundancies = Redundancies,
                 timestamp = Timestamp,
                 req_id = ReqId} = get_request_parameters(put, Key),
+    %% @TODO: Needs to modify sending parameters which include SSE-C related parameters
     invoke(Redundancies, leo_storage_handler_object, put,
            [#?OBJECT{addr_id = AddrId,
                      key = Key,
@@ -180,12 +160,6 @@ put(#put_req_params{path = Key,
                      cnumber = TotalChunks,
                      cindex = ChunkIndex,
                      checksum = Digest
-                     %% === NOTE: for 1.4.0 >>>
-                     %% redundancy_method = RedMethod,
-                     %% cp_params = CPParams,
-                     %% ec_lib = ECLib,
-                     %% ec_params = ECParams
-                     %% <<<
                     }, ReqId], []).
 
 

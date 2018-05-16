@@ -52,6 +52,8 @@
                    get_bucket_1/6, put_bucket_1/3, delete_bucket_1/2, head_bucket_1/2
                   ]}).
 
+-define(ERROR_METADATA_TOO_LARGE, 'metadata_too_large').
+
 
 %%--------------------------------------------------------------------
 %% API
@@ -474,12 +476,11 @@ get_x_amz_meta_directive(Req) ->
 
 %% @private
 get_x_amz_meta_directive(Req, ?BIN_EMPTY) ->
-    CS = ?http_header(Req, ?HTTP_HEADER_X_AMZ_COPY_SOURCE),
-    case CS of
+    case ?http_header(Req, ?HTTP_HEADER_X_AMZ_COPY_SOURCE) of
         ?BIN_EMPTY ->
             ?BIN_EMPTY;
         _ ->
-            %% return default - 'copy'
+            %% return default which is 'copy'
             ?HTTP_HEADER_X_AMZ_META_DIRECTIVE_COPY
     end;
 get_x_amz_meta_directive(_Req, Other) ->
@@ -491,7 +492,7 @@ get_x_amz_meta_directive(_Req, Other) ->
              {ok, Req} when Req::cowboy_req:req(),
                             Key::binary(),
                             ReqParams::#req_params{}).
-put_object(Req, _Key, #req_params{is_acl = true} = _Params) ->
+put_object(Req,_Key, #req_params{is_acl = true}) ->
     %% Need to return 200 in order to succeed the operation for DragonDisk
     %% More proper IMPL would be checking the UA header and
     %% return 200 if the UA indicates that the request comes from DragonDisk OR
@@ -508,10 +509,10 @@ put_object(Req, Key, Params) ->
                             Req::cowboy_req:req(),
                             Key::binary(),
                             ReqParams::#req_params{}).
-put_object(?BIN_EMPTY, Req, _Key, #req_params{is_multi_delete = true,
-                                              timeout_for_body = Timeout4Body,
-                                              transfer_decode_fun = TransferDecodeFun,
-                                              transfer_decode_state = TransferDecodeState} = Params) ->
+put_object(?BIN_EMPTY, Req,_Key, #req_params{is_multi_delete = true,
+                                             timeout_for_body = Timeout4Body,
+                                             transfer_decode_fun = TransferDecodeFun,
+                                             transfer_decode_state = TransferDecodeState} = Params) ->
     BodyOpts = case TransferDecodeFun of
                    undefined ->
                        [{read_timeout, Timeout4Body}];
@@ -551,6 +552,7 @@ put_object(?BIN_EMPTY, Req, Key, #req_params{bucket_name = BucketName,
                     ?reply_bad_request([?SERVER_HEADER], ?XML_ERROR_CODE_EntityTooLarge,
                                        ?XML_ERROR_MSG_EntityTooLarge, Key, <<>>, Req);
                 true when Params#req_params.is_upload == false ->
+                    %% PUT a Large Size Object
                     leo_gateway_http_commons:put_large_object(Req, Key, Size, Params);
                 false ->
                     Ret = case cowboy_req:has_body(Req) of
@@ -575,9 +577,10 @@ put_object(?BIN_EMPTY, Req, Key, #req_params{bucket_name = BucketName,
                                   {ok, {0, ?BIN_EMPTY, Req}}
                           end,
                     case Ret of
-                        {ok, _} ->
+                        {ok,_} ->
+                            %% PUT a Regular(Small) Size Object
                             leo_gateway_http_commons:put_small_object(Ret, Key, Params);
-                        {error, _} ->
+                        {error,_} ->
                             ?access_log_put(BucketName, Key, Size, ?HTTP_ST_BAD_REQ, BeginTime),
                             ?reply_bad_request([?SERVER_HEADER], ?XML_ERROR_CODE_InvalidArgument,
                                                ?XML_ERROR_MSG_InvalidArgument, Key, <<>>, Req)
@@ -783,14 +786,14 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
                                   threshold_of_chunk_len = Props#http_options.threshold_of_chunk_len,
                                   dont_abort_cleanup = Props#http_options.dont_abort_cleanup,
                                   begin_time = BeginTime}) of
-        {error, metadata_too_large} ->
-            {ok, Req_3} = ?reply_metadata_too_large([?SERVER_HEADER], Path_1, <<>>, Req_1),
-            {ok, Req_3, State};
+        {error, ?ERROR_METADATA_TOO_LARGE} ->
+            {ok, Req_2} = ?reply_metadata_too_large([?SERVER_HEADER], Path_1, <<>>, Req_1),
+            {ok, Req_2, State};
         ReqParams ->
             case auth(Req_1, HTTPMethod, Path_1, TokenLen, ReqParams) of
                 {error,_Reason} = Ret ->
                     handle_2(Ret, Req_1, HTTPMethod, Path_1, ReqParams, State);
-                {ok, AccessKeyId, SignParams} = Ret ->
+                {ok, AccessKeyId, SignParams} ->
                     ReqParams_1 =
                         case ReqParams#req_params.is_aws_chunked of
                             true ->
@@ -834,6 +837,7 @@ handle_1(Req, [{NumOfMinLayers, NumOfMaxLayers},
                                    Path::binary(),
                                    ReqParams::#req_params{},
                                    State::[any()]).
+%% @doc For Errors
 handle_2({error, unmatch}, Req,_HttpVerb, Key,_ReqParams, State) ->
     {ok, Req_2} = ?reply_forbidden([?SERVER_HEADER],
                                    ?XML_ERROR_CODE_SignatureDoesNotMatch,
@@ -846,13 +850,13 @@ handle_2({error, already_yours}, Req,_HttpVerb, Key,_ReqParams, State) ->
     {ok, Req_2} = ?reply_conflict([?SERVER_HEADER], ?XML_ERROR_CODE_BucketAlreadyOwnedByYou,
                                   ?XML_ERROR_MSG_BucketAlreadyOwnedByYou, Key, <<>>, Req),
     {ok, Req_2, State};
-handle_2({error, _Cause}, Req,_HttpVerb, Key,_ReqParams,State) ->
+handle_2({error,_Cause}, Req,_HttpVerb, Key,_ReqParams,State) ->
     {ok, Req_2} = ?reply_forbidden([?SERVER_HEADER],
                                    ?XML_ERROR_CODE_AccessDenied,
                                    ?XML_ERROR_MSG_AccessDenied, Key, <<>>, Req),
     {ok, Req_2, State};
 
-%% For Multipart Upload - Initiation
+%% @doc For Multipart Upload - Initiation
 handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key, #req_params{bucket_info = BucketInfo,
                                                               custom_metadata = CMetaBin,
                                                               path = Path,
@@ -889,8 +893,7 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key, #req_params{bucket_info = Buck
         end,
     {ok, Req_2, State};
 
-%% For Multipart Upload - Upload a part of an object
-%% @private
+%% @doc For Multipart Upload - Upload a part of an object
 handle_2({ok,_AccessKeyId}, Req, ?HTTP_PUT, Key,
          #req_params{upload_id = UploadId,
                      upload_part_num = PartNum,
@@ -902,13 +905,14 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_PUT, Key,
                                      Key, <<>>, Req),
     {ok, Req_2, State};
 
+%% @doc Put a chunked object
 handle_2({ok,_AccessKeyId}, Req, ?HTTP_PUT,_Key,
          #req_params{path = Path,
                      is_upload = false,
                      upload_id = UploadId,
-                     upload_part_num = PartNum1} = Params, State) when UploadId /= <<>>,
-                                                                       PartNum1 /= 0 ->
-    PartNum2 = list_to_binary(integer_to_list(PartNum1)),
+                     upload_part_num = PartNum} = Params, State) when UploadId /= <<>>,
+                                                                       PartNum /= 0 ->
+    PartNum2 = list_to_binary(integer_to_list(PartNum)),
     %% for confirmation
     Key1 = << Path/binary, ?STR_NEWLINE, UploadId/binary >>,
     %% for put a part of an object
@@ -940,14 +944,13 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_DELETE,_Key,
     _ = leo_gateway_rpc_handler:delete(TemporaryKey),
     {ok, Req_2} = ?reply_no_content([?SERVER_HEADER], Req),
     {ok, Req_2, State};
+
 %% For Multipart upload - Abort
 %% Removing all related objects: default behavior
 handle_2({ok,_AccessKeyId}, Req, ?HTTP_DELETE,_Key,
          #req_params{path = Path,
                      dont_abort_cleanup = false,
                      upload_id = UploadId}, State) when UploadId /= <<>> ->
-
-
     {ok, Req_2} =
         case abort_multipart_upload(Path) of
             ok ->
@@ -971,7 +974,6 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key,
                      transfer_decode_state = TransferDecodeState}, State) when UploadId /= <<>>,
                                                                                PartNum == 0 ->
     Res = cowboy_req:has_body(Req),
-
     {ok, Req_2} = handle_multi_upload_1(
                     Res, Req, Path, UploadId,
                     ChunkedLen, TransferDecodeFun, TransferDecodeState, BucketInfo),
@@ -981,6 +983,7 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key,
 handle_2({ok, AccessKeyId}, Req, ?HTTP_POST,  Path, Params, State) ->
     handle_2({ok, AccessKeyId}, Req, ?HTTP_PUT,  Path, Params, State);
 
+%% @TODO - 2018-05-16 (Object Encryption)
 handle_2({ok, AccessKeyId}, Req, HTTPMethod, Path, Params, State) ->
     case catch leo_gateway_http_req_handler:handle(
                  HTTPMethod, Req,
@@ -1359,7 +1362,7 @@ resp_copy_obj_xml(Req, Meta) ->
 
 
 %% @doc Retrieve header values from a request
-%%      Set request params
+%%      and then set request params
 %% @private
 -spec(request_params(Req, ReqParams) ->
              ReqParams when Req::cowboy_req:req(),
@@ -1395,7 +1398,7 @@ request_params(Req, Params) ->
 
     case byte_size(CMetaBin) of
         MSize when MSize >= ?HTTP_METADATA_LIMIT ->
-            {error, metadata_too_large};
+            {error, ?ERROR_METADATA_TOO_LARGE};
         _ ->
             Params#req_params{is_multi_delete = IsMultiDelete,
                               is_upload = IsUpload,

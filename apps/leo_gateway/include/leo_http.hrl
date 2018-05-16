@@ -626,7 +626,10 @@
                          cindex = 0 :: non_neg_integer(),
                          csize = 0 :: non_neg_integer(),
                          digest = 0 :: non_neg_integer(),
-                         bucket_info = undefined :: term()|undefined
+                         bucket_info = undefined :: term()|undefined,
+                         ssec_algorithm = <<>> :: binary(),
+                         ssec_key = <<>> :: binary(),
+                         ssec_key_hash = <<>> :: binary()
                         }).
 
 -record(transport_record, {transport :: module(),
