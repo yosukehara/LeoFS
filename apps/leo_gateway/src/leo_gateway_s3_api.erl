@@ -23,14 +23,6 @@
 
 -behaviour(leo_gateway_http_behaviour).
 
--export([start/2, stop/0,
-         init/3, handle/2, terminate/3]).
--export([onrequest/1, onresponse/1]).
--export([get_bucket/3, put_bucket/3, delete_bucket/3, head_bucket/3,
-         get_object/3, put_object/3, delete_object/3, head_object/3,
-         get_object_with_cache/4, range_object/3
-        ]).
-
 -include("leo_gateway.hrl").
 -include("leo_http.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
@@ -43,9 +35,17 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
 
+-export([start/2, stop/0,
+         init/3, handle/2, terminate/3]).
+-export([onrequest/1, onresponse/1]).
+-export([get_bucket/3, put_bucket/3, delete_bucket/3, head_bucket/3,
+         get_object/3, put_object/3, delete_object/3, head_object/3,
+         get_object_with_cache/4, range_object/3
+        ]).
+
 -compile({inline, [handle/2, handle_1/4, handle_2/6,
-                   handle_multi_upload_1/8,
-                   handle_multi_upload_2/6,
+                   handle_multi_upload_1/6,
+                   handle_multi_upload_2/4,
                    handle_multi_upload_3/3,
                    gen_upload_key/1, gen_upload_initiate_xml/3, gen_upload_completion_xml/4,
                    resp_copy_obj_xml/2, request_params/2, auth/5, auth/7, auth_1/7,
@@ -645,18 +645,18 @@ put_object(Directive, Req, Key, #req_params{handler = ?PROTO_HANDLER_S3,
 %% @doc POST/PUT operation on Objects. COPY
 %% @private
 put_object_1(Req, Src, Key, Meta, Bin, #req_params{bucket_name = BucketName,
-                                                   bucket_info = BucketInfo,
                                                    custom_metadata = CMetaBin,
                                                    begin_time = BeginTime}) ->
     Size = size(Bin),
     SrcDst = <<Src/binary, " -> ", Key/binary>>,
-    case leo_gateway_rpc_handler:put(#put_req_params{path = Key,
-                                                     body = Bin,
-                                                     meta = CMetaBin,
-                                                     dsize = Size,
-                                                     msize = byte_size(CMetaBin),
-                                                     bucket_info = BucketInfo}) of
-        {ok, _ETag} ->
+
+    case leo_gateway_rpc_handler:put(
+           #request{key = Key,
+                    data = Bin,
+                    meta = CMetaBin,
+                    dsize = Size,
+                    msize = byte_size(CMetaBin)}) of
+        {ok,_ETag} ->
             ?access_log_copy(BucketName, SrcDst, Size, ?HTTP_ST_OK, BeginTime),
             resp_copy_obj_xml(Req, Meta);
         {error, unavailable} ->
@@ -857,8 +857,7 @@ handle_2({error,_Cause}, Req,_HttpVerb, Key,_ReqParams,State) ->
     {ok, Req_2, State};
 
 %% @doc For Multipart Upload - Initiation
-handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key, #req_params{bucket_info = BucketInfo,
-                                                              custom_metadata = CMetaBin,
+handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key, #req_params{custom_metadata = CMetaBin,
                                                               path = Path,
                                                               is_upload = true}, State) ->
     %% remove a registered object with 'touch-command'
@@ -872,13 +871,13 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key, #req_params{bucket_info = Buck
     UploadKey = << Path/binary, ?STR_NEWLINE, UploadIdBin/binary >>,
 
     {ok, Req_2} =
-        case leo_gateway_rpc_handler:put(#put_req_params{path = UploadKey,
-                                                         body = ?BIN_EMPTY,
-                                                         meta = CMetaBin,
-                                                         dsize = 0,
-                                                         msize = byte_size(CMetaBin),
-                                                         bucket_info = BucketInfo}) of
-            {ok, _ETag} ->
+        case leo_gateway_rpc_handler:put(
+               #request{key = UploadKey,
+                        data = ?BIN_EMPTY,
+                        meta = CMetaBin,
+                        dsize = 0,
+                        msize = byte_size(CMetaBin)}) of
+            {ok,_ETag} ->
                 %% Response xml to a client
                 [BucketName|Path_1] = leo_misc:binary_tokens(Path, ?BIN_SLASH),
                 XML = gen_upload_initiate_xml(BucketName, Path_1, UploadId),
@@ -911,7 +910,7 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_PUT,_Key,
                      is_upload = false,
                      upload_id = UploadId,
                      upload_part_num = PartNum} = Params, State) when UploadId /= <<>>,
-                                                                       PartNum /= 0 ->
+                                                                      PartNum /= 0 ->
     PartNum2 = list_to_binary(integer_to_list(PartNum)),
     %% for confirmation
     Key1 = << Path/binary, ?STR_NEWLINE, UploadId/binary >>,
@@ -964,9 +963,7 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_DELETE,_Key,
 
 %% For Multipart Upload - Completion
 handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key,
-         #req_params{bucket_info = BucketInfo,
-                     path = Path,
-                     chunked_obj_len = ChunkedLen,
+         #req_params{path = Path,
                      is_upload = false,
                      upload_id = UploadId,
                      upload_part_num = PartNum,
@@ -974,9 +971,8 @@ handle_2({ok,_AccessKeyId}, Req, ?HTTP_POST,_Key,
                      transfer_decode_state = TransferDecodeState}, State) when UploadId /= <<>>,
                                                                                PartNum == 0 ->
     Res = cowboy_req:has_body(Req),
-    {ok, Req_2} = handle_multi_upload_1(
-                    Res, Req, Path, UploadId,
-                    ChunkedLen, TransferDecodeFun, TransferDecodeState, BucketInfo),
+    {ok, Req_2} = handle_multi_upload_1(Res, Req, Path, UploadId,
+                                        TransferDecodeFun, TransferDecodeState),
     {ok, Req_2, State};
 
 %% For Regular cases
@@ -1171,17 +1167,14 @@ aws_chunk_decode({ok, Acc}, Buffer, read_chunk, Offset,
 %% @doc Handle multi-upload processing
 %% @private
 -spec(handle_multi_upload_1(IsHandling, Req, Path, UploadId,
-                            ChunkedLen, TransferDecodeFun, TransferDecodeState, BucketInfo) ->
+                            TransferDecodeFun, TransferDecodeState) ->
              {ok, Req} when IsHandling::boolean(),
                             Req::cowboy_req:req(),
                             Path::binary(),
                             UploadId::binary(),
-                            ChunkedLen::non_neg_integer(),
                             TransferDecodeFun::function(),
-                            TransferDecodeState::term(),
-                            BucketInfo::#?BUCKET{}).
-handle_multi_upload_1(true, Req, Path, UploadId,
-                      ChunkedLen, TransferDecodeFun, TransferDecodeState, BucketInfo) ->
+                            TransferDecodeState::term()).
+handle_multi_upload_1(true, Req, Path, UploadId, TransferDecodeFun, TransferDecodeState) ->
     Path4Conf = << Path/binary, ?STR_NEWLINE, UploadId/binary >>,
 
     case leo_gateway_rpc_handler:get(Path4Conf) of
@@ -1193,7 +1186,7 @@ handle_multi_upload_1(true, Req, Path, UploadId,
                                [{transfer_decode, TransferDecodeFun, TransferDecodeState}]
                        end,
             Ret = cowboy_req:body(Req, BodyOpts),
-            {ok, Req2} = handle_multi_upload_2(Ret, Req, Path, ChunkedLen, BucketInfo, CMetaBin),
+            {ok, Req2} = handle_multi_upload_2(Ret, Req, Path, CMetaBin),
             %% Deleting a temporary object after getting the upload done could decrease the odds
             %% inconsistencies against the temporary object could happen.
             %% This hack should mitigate https://github.com/leo-project/leofs/issues/845
@@ -1202,19 +1195,18 @@ handle_multi_upload_1(true, Req, Path, UploadId,
         _ ->
             ?reply_service_unavailable_error([?SERVER_HEADER], Path, <<>>, Req)
     end;
-handle_multi_upload_1(false, Req, Path,_UploadId,_ChunkedLen,_,_,_) ->
+handle_multi_upload_1(false, Req, Path,_UploadId,_,_) ->
     ?reply_service_unavailable_error([?SERVER_HEADER], Path, <<>>, Req).
 
 %% @private
--spec(handle_multi_upload_2({ok, Bin, Req}|{error, Cause}, Req, Path, ChunkedLen, BucketInfo, CMetaBin) ->
+-spec(handle_multi_upload_2({ok, Bin, Req}|{error, Cause}, Req, Path, CMetaBin) ->
              {ok, Req} when Bin::binary(),
                             Req::cowboy_req:req(),
                             Cause::any(),
                             Path::binary(),
-                            ChunkedLen::non_neg_integer(),
-                            BucketInfo::#?BUCKET{},
                             CMetaBin::binary()).
-handle_multi_upload_2({ok, Bin, Req}, _Req, Path,_ChunkedLen, BucketInfo, CMetaBin) ->
+%% @TODO 2018-05-17 (BucketInfo is unnecessary)
+handle_multi_upload_2({ok, Bin, Req},_Req, Path, CMetaBin) ->
     %% trim spaces
     Acc = fun(#xmlText{value = " ",
                        pos = P}, Acc, S) ->
@@ -1237,15 +1229,15 @@ handle_multi_upload_2({ok, Bin, Req}, _Req, Path,_ChunkedLen, BucketInfo, CMetaB
             case leo_gateway_rpc_handler:head(ChildKey) of
                 {ok, #?METADATA{del = 0,
                                 dsize = ChildObjSize}} ->
-                    case leo_gateway_rpc_handler:put(#put_req_params{path = Path,
-                                                                     body = ?BIN_EMPTY,
-                                                                     meta = CMetaBin,
-                                                                     dsize = Len,
-                                                                     msize = byte_size(CMetaBin),
-                                                                     csize = ChildObjSize,
-                                                                     total_chunks = TotalUploadedObjs,
-                                                                     digest = ETag_1,
-                                                                     bucket_info = BucketInfo}) of
+                    case leo_gateway_rpc_handler:put(
+                           #request{key = Path,
+                                    data = ?BIN_EMPTY,
+                                    meta = CMetaBin,
+                                    dsize = Len,
+                                    msize = byte_size(CMetaBin),
+                                    csize = ChildObjSize,
+                                    cnumber = TotalUploadedObjs,
+                                    checksum = ETag_1}) of
                         {ok,_} ->
                             [BucketName|Path_1] = leo_misc:binary_tokens(Path, ?BIN_SLASH),
                             ETag2 = leo_hex:integer_to_hex(ETag_1, 32),
@@ -1270,7 +1262,7 @@ handle_multi_upload_2({ok, Bin, Req}, _Req, Path,_ChunkedLen, BucketInfo, CMetaB
             ?error("handle_multi_upload_2/5", [{key, binary_to_list(Path)}, {cause, Cause}]),
             ?reply_internal_error([?SERVER_HEADER], Path, <<>>, Req)
     end;
-handle_multi_upload_2({error, Cause}, Req, Path,_ChunkedLen,_BucketInfo, _CMetaBin) ->
+handle_multi_upload_2({error, Cause}, Req, Path,_CMetaBin) ->
     ?error("handle_multi_upload_2/5", [{key, binary_to_list(Path)}, {cause, Cause}]),
     ?reply_internal_error([?SERVER_HEADER], Path, <<>>, Req).
 

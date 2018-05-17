@@ -323,9 +323,9 @@ put_object_notfound_([Node0, Node1]) ->
                                         fun(_, _) ->
                                                 {error, not_found}
                                         end]),
-    Res = leo_gateway_rpc_handler:put(#put_req_params{path = <<"bucket/key">>,
-                                                      body =  <<"body">>,
-                                                      dsize = 4}),
+    Res = leo_gateway_rpc_handler:put(#request{key = <<"bucket/key">>,
+                                               data =  <<"body">>,
+                                               dsize = 4}),
     ?assertEqual({error, not_found}, Res),
     ok = rpc:call(Node0, meck, unload, [leo_storage_handler_object]),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
@@ -337,9 +337,9 @@ put_object_error_([_Node0, Node1]) ->
                                         fun(_,_) ->
                                                 {error, internal_server_error}
                                         end]),
-    Res = leo_gateway_rpc_handler:put(#put_req_params{path = <<"bucket/key">>,
-                                                      body =  <<"body">>,
-                                                      dsize = 4}),
+    Res = leo_gateway_rpc_handler:put(#request{key = <<"bucket/key">>,
+                                               data =  <<"body">>,
+                                               dsize = 4}),
     ?assertEqual({error, internal_server_error}, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.
@@ -350,9 +350,9 @@ put_object_normal1_([_Node0, Node1]) ->
                                         fun(_, _) ->
                                                 ok
                                         end]),
-    Res = leo_gateway_rpc_handler:put(#put_req_params{path = <<"bucket/key">>,
-                                                      body =  <<"body">>,
-                                                      dsize = 4}),
+    Res = leo_gateway_rpc_handler:put(#request{key = <<"bucket/key">>,
+                                               data =  <<"body">>,
+                                               dsize = 4}),
     ?assertEqual(ok, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.

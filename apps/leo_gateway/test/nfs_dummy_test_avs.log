@@ -1,30 +1,29 @@
-rd(put_req_params, {
-          path = <<>>,
-          body = <<>>,
+rd(request, {
+          key = <<>>,
+          data = <<>>,
           meta = <<>>,
           msize = 0,
           dsize = 0,
-          total_chunks = 0,
+          cnumber = 0,
           cindex = 0,
           csize = 0,
-          digest = 0,
-          bucket_info = undefined
+          checksum = 0
           }).
 
-Req_Old = #put_req_params{
-    path = <<"test/test_old_dir/$$_dir_$$">>
+Req_Old = #request{
+    key = <<"test/test_old_dir/$$_dir_$$">>
 }.
 
-Req_New = #put_req_params{
-    path = <<"test/test_new_dir/\x00_dir_\x00">>
+Req_New = #request{
+    key = <<"test/test_new_dir/\x00_dir_\x00">>
 }.
 
-Req_BNew = #put_req_params{
-    path = <<"test/test_both_dir/\x00_dir_\x00">>
+Req_BNew = #request{
+    key = <<"test/test_both_dir/\x00_dir_\x00">>
 }.
 
-Req_BOld = #put_req_params{
-    path = <<"test/test_both_dir/$$_dir_$$">>
+Req_BOld = #request{
+    key = <<"test/test_both_dir/$$_dir_$$">>
 }.
 
 leo_gateway_rpc_handler:put(Req_Old).

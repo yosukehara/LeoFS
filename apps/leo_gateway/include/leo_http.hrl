@@ -617,21 +617,6 @@
          ssec_copy_src_key_hash = <<>> :: binary()           %% (copy source) Base64-encoded 128-bit MD5 digest of the encryption key
         }).
 
--record(put_req_params, {path = <<>> :: binary(),
-                         body = <<>> :: binary(),
-                         meta = <<>> :: binary(),
-                         msize = 0 :: non_neg_integer(),
-                         dsize = 0 :: non_neg_integer(),
-                         total_chunks = 0 :: non_neg_integer(),
-                         cindex = 0 :: non_neg_integer(),
-                         csize = 0 :: non_neg_integer(),
-                         digest = 0 :: non_neg_integer(),
-                         bucket_info = undefined :: term()|undefined,
-                         ssec_algorithm = <<>> :: binary(),
-                         ssec_key = <<>> :: binary(),
-                         ssec_key_hash = <<>> :: binary()
-                        }).
-
 -record(transport_record, {transport :: module(),
                            socket :: inet:socket(),
                            sending_chunked_obj_len :: pos_integer()

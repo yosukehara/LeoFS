@@ -23,6 +23,7 @@
 
 -include("leo_http.hrl").
 -include("leo_gateway.hrl").
+-include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
 -include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
@@ -118,7 +119,7 @@ delete(Key) ->
     invoke(ReqParams#rpc_params.redundancies,
            leo_storage_handler_object,
            delete,
-           [#?OBJECT{addr_id = ReqParams#rpc_params.addr_id,
+           [#request{addr_id = ReqParams#rpc_params.addr_id,
                      key = Key,
                      timestamp = ReqParams#rpc_params.timestamp},
             ReqParams#rpc_params.req_id],
@@ -127,46 +128,22 @@ delete(Key) ->
 
 %% @doc Insert an object into the storage-cluster (regular-case)
 -spec(put(ReqParams) ->
-             ok|{ok, pos_integer()}|{error, any()} when ReqParams::#put_req_params{}).
-put(#put_req_params{path = Key,
-                    body = Body,
-                    dsize = Size,
-                    meta = CMeta,
-                    msize = MSize,
-                    total_chunks = TotalChunks,
-                    cindex = ChunkIndex,
-                    csize = ChunkedSize,
-                    digest = Digest,
-                    %% SSE-C related parameters
-                    ssec_algorithm = _SSEC_Algorithm,
-                    ssec_key = _SSEC_Key,
-                    ssec_key_hash = _SSEC_KeyHash
-                   }) ->
+             ok|{ok, pos_integer()}|{error, any()} when ReqParams::#request{}).
+put(#request{key = Key} = Request) ->
     ok = leo_metrics_req:notify(?STAT_COUNT_PUT),
     #rpc_params{addr_id = AddrId,
                 redundancies = Redundancies,
                 timestamp = Timestamp,
                 req_id = ReqId} = get_request_parameters(put, Key),
-    %% @TODO: Needs to modify sending parameters which include SSE-C related parameters
     invoke(Redundancies, leo_storage_handler_object, put,
-           [#?OBJECT{addr_id = AddrId,
-                     key = Key,
-                     data = Body,
-                     meta = CMeta,
-                     dsize = Size,
-                     msize = MSize,
-                     timestamp = Timestamp,
-                     csize = ChunkedSize,
-                     cnumber = TotalChunks,
-                     cindex = ChunkIndex,
-                     checksum = Digest
-                    }, ReqId], []).
+           [Request#request{addr_id = AddrId,
+                            timestamp = Timestamp}, ReqId], []).
 
 
 %% @doc Do invoke rpc calls with handling retries
 -spec(invoke(list(), atom(), atom(), list(), list()) ->
              ok|{ok, any()}|{ok, #?METADATA{}, binary()}|{error, any()}).
-invoke([], _Mod, _Method, _Args, Errors) ->
+invoke([],_Mod,_Method,_Args, Errors) ->
     {error, error_filter(Errors)};
 invoke([#redundant_node{available = false}|T], Mod, Method, Args, Errors) ->
     invoke(T, Mod, Method, Args, [?ERR_TYPE_INTERNAL_ERROR|Errors]);
