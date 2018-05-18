@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -21,6 +21,7 @@
 %%======================================================================
 -module(leo_nfs_mount3_server).
 
+-include("leo_http.hrl").
 -include("leo_gateway.hrl").
 -include("leo_nfs_mount3.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
@@ -154,7 +155,7 @@ get_mount_key_1([Node|Rest], Bucket, AccessKey, IP) ->
 
 tokenize_path(Path) ->
     Path1 = formalize_path(Path),
-    Tokenized = binary:split(Path1, <<"/">>, [global, trim]),
+    Tokenized = binary:split(Path1, ?BIN_SLASH, [global, trim]),
     case length(Tokenized) of
         Len when Len == 4 ->
             [_, Bucket, AccessKey, Token] = Tokenized,

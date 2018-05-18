@@ -59,15 +59,6 @@ is_file(Path) ->
 %% @doc  Returns true if Path refers to a directory, and false otherwise.
 -spec(is_dir(binary()) -> boolean()).
 is_dir(Path) ->
-    %% === For 1.4
-    %% {ok, #redundancies{nodes = Redundancies}} =
-    %%     leo_redundant_manager_api:get_redundancies_by_key(get, Path),
-    %% leo_gateway_rpc_handler:invoke(Redundancies,
-    %%                                leo_storage_handler_directory,
-    %%                                is_dir,
-    %%                                [Path],
-    %%                                []).
-
     case list_dir(Path, false) of
         {ok, Meta} when is_list(Meta) =:= true andalso length(Meta) > 0 ->
             true;
@@ -85,43 +76,36 @@ list_dir(Path) ->
 -spec(list_dir(binary(), boolean()) ->
              {ok, list(#?METADATA{})}|{error, any()}).
 list_dir(Path, IncludeHiddenFiles) ->
-    {ok, #redundancies{nodes = Redundancies}} =
-        leo_redundant_manager_api:get_redundancies_by_key(get, Path),
     Modifier = case IncludeHiddenFiles of
                    true ->
                        fun list_dir_append_hidden_files/2;
                    false ->
                        void
                end,
-    list_dir(Redundancies, Path, <<>>, [], Modifier).
+    list_dir(Path, <<>>, [], Modifier).
 
-list_dir(Redundancies, Path, Marker, Acc, Modifier) when is_function(Modifier) ->
-    case leo_gateway_rpc_handler:invoke(
-           Redundancies,
-           leo_storage_handler_directory,
-           find_by_parent_dir,
-           [Path, <<"/">>, Marker, ?LEOFS_NUM_OF_LIST_DIR], []) of
+%% @TODO
+list_dir(Path, Marker, Acc, Modifier) when is_function(Modifier) ->
+    case leo_gateway_rpc_handler:get_bucket(
+           Path, ?BIN_SLASH, Marker, ?LEOFS_NUM_OF_LIST_DIR) of
         {ok, []} ->
             {ok, Modifier(Path, Acc)};
-        {ok, Metadata} when is_list(Metadata) ->
-            Last = lists:last(Metadata),
+        {ok, MetadataL} when is_list(MetadataL) ->
+            Last = lists:last(MetadataL),
             TrimedKey = path_trim_trailing_sep(Last#?METADATA.key),
             case Marker of
                 TrimedKey ->
                     {ok, Modifier(Path, Acc)};
                 _Other ->
-                    list_dir(Redundancies, Path, TrimedKey, [Metadata|Acc], Modifier)
+                    list_dir(Path, TrimedKey, [MetadataL|Acc], Modifier)
             end;
         Error ->
-            ?error("list_dir/5", [{cause, Error}]),
+            ?error("list_dir/4", [{cause, Error}]),
             Error
     end;
-list_dir(Redundancies, Path, Marker,_Acc,_Modifier) ->
-    leo_gateway_rpc_handler:invoke(
-      Redundancies,
-      leo_storage_handler_directory,
-      find_by_parent_dir,
-      [Path, <<"/">>, Marker, ?LEOFS_NUM_OF_LIST_DIR], []).
+list_dir(Path, Marker,_Acc,_Modifier) ->
+    leo_gateway_rpc_handler:get_bucket(
+      Path, ?BIN_SLASH, Marker, ?LEOFS_NUM_OF_LIST_DIR).
 
 
 %% @private
@@ -782,10 +766,10 @@ path_trim_trailing_sep(Src) ->
 -spec(path_relative_to_abs(binary()) ->
              binary()).
 path_relative_to_abs(P) ->
-    path_relative_to_abs(binary:split(P, <<"/">>, [global, trim]), []).
+    path_relative_to_abs(binary:split(P, ?BIN_SLASH, [global, trim]), []).
 
 path_relative_to_abs([], []) ->
-    <<"/">>;
+    ?BIN_SLASH;
 path_relative_to_abs([], Acc) ->
     filename:join(lists:reverse(Acc));
 path_relative_to_abs([<<>>|Rest], Acc) ->

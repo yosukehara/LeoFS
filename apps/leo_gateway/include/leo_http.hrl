@@ -27,6 +27,18 @@
 -define(HTTP_DELETE, <<"DELETE">>).
 -define(HTTP_HEAD, <<"HEAD">>).
 
+-define(HTTP_GET_ATOM, 'get').
+-define(HTTP_POST_ATOM, 'post').
+-define(HTTP_PUT_ATOM, 'put').
+-define(HTTP_DELETE_ATOM, 'delete').
+-define(HTTP_HEAD_ATOM, 'head').
+-type(http_verb_atom() :: ?HTTP_GET_ATOM |
+                          ?HTTP_POST_ATOM |
+                          ?HTTP_PUT_ATOM |
+                          ?HTTP_DELETE_ATOM |
+                          ?HTTP_HEAD_ATOM).
+
+
 %% HTTP-RELATED
 -define(SERVER_HEADER, {<<"server">>,<<"LeoFS">>}).
 -define(STR_NEWLINE, "\n").
