@@ -62,6 +62,7 @@ api_test_() ->
             ]}}.
 
 setup() ->
+    io:format(user, "~n~n~n:::~p:::START:::~n",[?MODULE]),
     ok = leo_logger_api:new("./", ?LOG_LEVEL_WARN),
     io:format(user, "cwd:~p~n",[os:cmd("pwd")]),
     [] = os:cmd("epmd -daemon"),
@@ -107,20 +108,22 @@ teardown([_, Node1]) ->
     net_kernel:stop(),
     slave:stop(Node1),
     leo_logger_api:stop(),
+    io:format(user, ":::~p:::END:::~n~n~n",[?MODULE]),
     ok.
 
 head_object_notfound_([Node0, Node1]) ->
     ok = rpc:call(Node0, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node0, meck, expect, [leo_storage_handler_object, head,
-                                        fun(_Addr, _Key) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, head,
-                                        fun(_Addr, _Key) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     Res = leo_gateway_rpc_handler:head(<<"bucket/key">>),
+    io:format(user, "- head/1 (not_found) - res:~p~n",[Res]),
     ?assertEqual({error, not_found}, Res),
     ok = rpc:call(Node0, meck, unload, [leo_storage_handler_object]),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
@@ -129,10 +132,11 @@ head_object_notfound_([Node0, Node1]) ->
 head_object_error_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, head,
-                                        fun(_Addr, _Key) ->
+                                        fun(_Req) ->
                                                 {error, internal_server_error}
                                         end]),
     Res = leo_gateway_rpc_handler:head(<<"bucket/key">>),
+    io:format(user, "- head/1 (error)  - res:~p~n",[Res]),
     ?assertEqual({error, internal_server_error}, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.
@@ -140,7 +144,7 @@ head_object_error_([_Node0, Node1]) ->
 head_object_normal1_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, head,
-                                        fun(_Addr, Key) ->
+                                        fun(#request{key = Key} = _Req) ->
                                                 {ok,
                                                  #?METADATA{
                                                             key = Key,
@@ -151,6 +155,7 @@ head_object_normal1_([_Node0, Node1]) ->
                                         end]),
     KEY = <<"bucket/key">>,
     {ok, Meta} = leo_gateway_rpc_handler:head(KEY),
+    io:format(user, "- head/1 (normal.1) - res:~p~n",[Meta]),
     ?assertEqual(10, Meta#?METADATA.dsize),
     ?assertEqual(KEY, Meta#?METADATA.key),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
@@ -159,15 +164,16 @@ head_object_normal1_([_Node0, Node1]) ->
 get_object_notfound_([Node0, Node1]) ->
     ok = rpc:call(Node0, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node0, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, _Key, _ReqId) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, _Key, _ReqId) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     Res = leo_gateway_rpc_handler:get(<<"bucket/key">>),
+    io:format(user, "- get/1 (not_found) - res:~p~n",[Res]),
     ?assertEqual({error, not_found}, Res),
     ok = rpc:call(Node0, meck, unload, [leo_storage_handler_object]),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
@@ -176,10 +182,11 @@ get_object_notfound_([Node0, Node1]) ->
 get_object_error_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, _Key, _ReqId) ->
+                                        fun(_Req) ->
                                                 {error, internal_server_error}
                                         end]),
     Res = leo_gateway_rpc_handler:get(<<"bucket/key">>),
+    io:format(user, "- get/1 (error) - res:~p~n",[Res]),
     ?assertEqual({error, internal_server_error}, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.
@@ -188,7 +195,7 @@ get_object_normal1_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     CMetaBin = term_to_binary([{<<"x-amz-meta-test">>, <<"cmeta">>}]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, Key, _ReqId) ->
+                                        fun(#request{key = Key} = _Req) ->
                                                 {ok,
                                                  #?METADATA{
                                                             key = Key,
@@ -202,6 +209,8 @@ get_object_normal1_([_Node0, Node1]) ->
                                         end]),
     KEY = <<"bucket/key">>,
     {ok, Meta, Body} = leo_gateway_rpc_handler:get(KEY),
+    io:format(user, "- get/1 (normal.1) - res:~p~n",[Meta]),
+    io:format(user, "- get/1 (normal.1) - res:~p~n",[Body]),
     ?assertEqual(4, Meta#?METADATA.dsize),
     ?assertEqual(KEY, Meta#?METADATA.key),
     ?assertEqual(<<"body">>, Body),
@@ -212,15 +221,16 @@ get_object_normal1_([_Node0, Node1]) ->
 get_object_with_etag_notfound_([Node0, Node1]) ->
     ok = rpc:call(Node0, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node0, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, _Key, _Etag, _ReqId) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, _Key, _Etag, _ReqId) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     Res = leo_gateway_rpc_handler:get(<<"bucket/key">>, 123),
+    io:format(user, "- get/1 (w/etag) - res:~p~n",[Res]),
     ?assertEqual({error, not_found}, Res),
     ok = rpc:call(Node0, meck, unload, [leo_storage_handler_object]),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
@@ -229,10 +239,11 @@ get_object_with_etag_notfound_([Node0, Node1]) ->
 get_object_with_etag_error_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, _Key, _Etag, _ReqId) ->
+                                        fun(_Req) ->
                                                 {error, internal_server_error}
                                         end]),
     Res = leo_gateway_rpc_handler:get(<<"bucket/key">>, 123),
+    io:format(user, "- get/1 (w/etag-error) - res:~p~n",[Res]),
     ?assertEqual({error, internal_server_error}, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.
@@ -241,7 +252,7 @@ get_object_with_etag_normal1_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     CMetaBin = term_to_binary([{<<"x-amz-meta-test">>, <<"cmeta">>}]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, Key, _Etag, _ReqId) ->
+                                        fun(#request{key = Key} = _Req) ->
                                                 {ok,
                                                  #?METADATA{
                                                             key = Key,
@@ -255,6 +266,8 @@ get_object_with_etag_normal1_([_Node0, Node1]) ->
                                         end]),
     KEY = <<"bucket/key">>,
     {ok, Meta, Body} = leo_gateway_rpc_handler:get(KEY, 123),
+    io:format(user, "- get/1 (w/etag-normal) - res:~p~n",[Meta]),
+    io:format(user, "- get/1 (w/etag-normal) - res:~p~n",[Body]),
     ?assertEqual(4, Meta#?METADATA.dsize),
     ?assertEqual(KEY, Meta#?METADATA.key),
     ?assertEqual(<<"body">>, Body),
@@ -265,10 +278,11 @@ get_object_with_etag_normal1_([_Node0, Node1]) ->
 get_object_with_etag_normal2_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, get,
-                                        fun(_Addr, _Key, _Etag, _ReqId) ->
+                                        fun(_Req) ->
                                                 {ok, match}
                                         end]),
     Res = leo_gateway_rpc_handler:get(<<"bucket/key">>, 123),
+    io:format(user, "- get/1 (w/etag-normal.2) - res:~p~n",[Res]),
     ?assertEqual({ok, match}, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.
@@ -276,15 +290,16 @@ get_object_with_etag_normal2_([_Node0, Node1]) ->
 delete_object_notfound_([Node0, Node1]) ->
     ok = rpc:call(Node0, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node0, meck, expect, [leo_storage_handler_object, delete,
-                                        fun(_, _) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, delete,
-                                        fun(_, _) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     Res = leo_gateway_rpc_handler:delete(<<"bucket/key">>),
+    io:format(user, "- delete/1 (not_found) - res:~p~n",[Res]),
     ?assertEqual({error, not_found}, Res),
     ok = rpc:call(Node0, meck, unload, [leo_storage_handler_object]),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
@@ -293,10 +308,11 @@ delete_object_notfound_([Node0, Node1]) ->
 delete_object_error_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, delete,
-                                        fun(_, _) ->
+                                        fun(_Req) ->
                                                 {error, internal_server_error}
                                         end]),
     Res = leo_gateway_rpc_handler:delete(<<"bucket/key">>),
+    io:format(user, "- delete/1 (error) - res:~p~n",[Res]),
     ?assertEqual({error, internal_server_error}, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.
@@ -304,10 +320,11 @@ delete_object_error_([_Node0, Node1]) ->
 delete_object_normal1_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, delete,
-                                        fun(_, _) ->
+                                        fun(_Req) ->
                                                 ok
                                         end]),
     Res = leo_gateway_rpc_handler:delete(<<"bucket/key">>),
+    io:format(user, "- delete/1 (normal.1) - res:~p~n",[Res]),
     ?assertEqual(ok, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.
@@ -315,17 +332,18 @@ delete_object_normal1_([_Node0, Node1]) ->
 put_object_notfound_([Node0, Node1]) ->
     ok = rpc:call(Node0, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node0, meck, expect, [leo_storage_handler_object, put,
-                                        fun(_, _) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, put,
-                                        fun(_, _) ->
+                                        fun(_Req) ->
                                                 {error, not_found}
                                         end]),
-    Res = leo_gateway_rpc_handler:put(#put_req_params{path = <<"bucket/key">>,
-                                                      body =  <<"body">>,
-                                                      dsize = 4}),
+    Res = leo_gateway_rpc_handler:put(#request{key = <<"bucket/key">>,
+                                               data =  <<"body">>,
+                                               dsize = 4}),
+    io:format(user, "- put/1 (not_found) - res:~p~n",[Res]),
     ?assertEqual({error, not_found}, Res),
     ok = rpc:call(Node0, meck, unload, [leo_storage_handler_object]),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
@@ -334,12 +352,13 @@ put_object_notfound_([Node0, Node1]) ->
 put_object_error_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, put,
-                                        fun(_,_) ->
+                                        fun(_Req) ->
                                                 {error, internal_server_error}
                                         end]),
-    Res = leo_gateway_rpc_handler:put(#put_req_params{path = <<"bucket/key">>,
-                                                      body =  <<"body">>,
-                                                      dsize = 4}),
+    Res = leo_gateway_rpc_handler:put(#request{key = <<"bucket/key">>,
+                                               data =  <<"body">>,
+                                               dsize = 4}),
+    io:format(user, "- put/1 (error) - res:~p~n",[Res]),
     ?assertEqual({error, internal_server_error}, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.
@@ -347,12 +366,13 @@ put_object_error_([_Node0, Node1]) ->
 put_object_normal1_([_Node0, Node1]) ->
     ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, put,
-                                        fun(_, _) ->
+                                        fun(_Req) ->
                                                 ok
                                         end]),
-    Res = leo_gateway_rpc_handler:put(#put_req_params{path = <<"bucket/key">>,
-                                                      body =  <<"body">>,
-                                                      dsize = 4}),
+    Res = leo_gateway_rpc_handler:put(#request{key = <<"bucket/key">>,
+                                               data =  <<"body">>,
+                                               dsize = 4}),
+    io:format(user, "- put/1 (normal.1) - res:~p~n",[Res]),
     ?assertEqual(ok, Res),
     ok = rpc:call(Node1, meck, unload, [leo_storage_handler_object]),
     ok.

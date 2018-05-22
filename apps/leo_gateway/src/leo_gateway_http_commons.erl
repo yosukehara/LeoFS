@@ -23,6 +23,7 @@
 
 -include("leo_gateway.hrl").
 -include("leo_http.hrl").
+-include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
 -include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
@@ -698,7 +699,6 @@ move_large_object_1({error, Cause},
     {error, ?ERROR_FAIL_RETRIEVE_OBJ};
 move_large_object_1(done, #req_large_obj{handler = WriteHandler,
                                          bucket_name = BucketName,
-                                         bucket_info = BucketInfo,
                                          key = Key,
                                          meta = CMeta,
                                          length = Size,
@@ -709,17 +709,16 @@ move_large_object_1(done, #req_large_obj{handler = WriteHandler,
                              num_of_chunks = TotalChunks,
                              md5_context = Digest}} when Size == TotalSize ->
             Digest_1 = leo_hex:raw_binary_to_integer(Digest),
-            case leo_gateway_rpc_handler:put(#put_req_params{
-                                                path = Key,
-                                                body = ?BIN_EMPTY,
-                                                meta = CMeta,
-                                                msize = byte_size(CMeta),
-                                                dsize = Size,
-                                                total_chunks = TotalChunks,
-                                                cindex = 0,
-                                                csize = ChunkedSize,
-                                                digest = Digest_1,
-                                                bucket_info = BucketInfo}) of
+            %% @TODO Object Encryption (2018-05-17)
+            case leo_gateway_rpc_handler:put(#request{key = Key,
+                                                      data = ?BIN_EMPTY,
+                                                      meta = CMeta,
+                                                      msize = byte_size(CMeta),
+                                                      dsize = Size,
+                                                      cnumber = TotalChunks,
+                                                      cindex = 0,
+                                                      csize = ChunkedSize,
+                                                      checksum = Digest_1}) of
                 {ok, _ETag} ->
                     ?access_log_put(BucketName, Key, Size, ?HTTP_ST_OK, BeginTime),
                     ok;
@@ -808,16 +807,14 @@ put_small_object({ok, {Size, Bin, Req}}, Key, #req_params{bucket_name = BucketNa
                                                           custom_metadata = CMeta,
                                                           upload_part_num = UploadPartNum,
                                                           has_inner_cache = HasInnerCache,
-                                                          bucket_info = BucketInfo,
                                                           begin_time = BeginTime}) ->
     case leo_gateway_rpc_handler:put(
-           #put_req_params{path = Key,
-                           body = Bin,
-                           meta = CMeta,
-                           msize = byte_size(CMeta),
-                           dsize = Size,
-                           cindex = UploadPartNum,
-                           bucket_info = BucketInfo}) of
+           #request{key = Key,
+                    data = Bin,
+                    meta = CMeta,
+                    msize = byte_size(CMeta),
+                    dsize = Size,
+                    cindex = UploadPartNum}) of
         {ok, ETag} ->
             case (HasInnerCache
                   andalso binary_is_contained(Key, 10) == false) of
@@ -982,7 +979,6 @@ put_large_object_1({error, Cause}, #req_large_obj{key = Key}) ->
 
 %% @private
 put_large_object_1({ok, Data, Req}, #req_large_obj{handler = Handler,
-                                                   bucket_info = BucketInfo,
                                                    key = Key,
                                                    meta = CMeta,
                                                    length = Size,
@@ -994,17 +990,16 @@ put_large_object_1({ok, Data, Req}, #req_large_obj{handler = Handler,
                                      num_of_chunks = TotalChunks,
                                      md5_context = Digest}} when Size == TotalSize ->
                     Digest_1 = leo_hex:raw_binary_to_integer(Digest),
-                    case leo_gateway_rpc_handler:put(#put_req_params{
-                                                        path = Key,
-                                                        body = ?BIN_EMPTY,
-                                                        meta = CMeta,
-                                                        msize = byte_size(CMeta),
-                                                        dsize = Size,
-                                                        total_chunks = TotalChunks,
-                                                        csize = ChunkedSize,
-                                                        digest = Digest_1,
-                                                        bucket_info = BucketInfo}) of
-                        {ok, _ETag} ->
+                    case leo_gateway_rpc_handler:put(
+                           #request{key = Key,
+                                    data = ?BIN_EMPTY,
+                                    meta = CMeta,
+                                    msize = byte_size(CMeta),
+                                    dsize = Size,
+                                    cnumber = TotalChunks,
+                                    csize = ChunkedSize,
+                                    checksum = Digest_1}) of
+                        {ok,_ETag} ->
                             Header = [?SERVER_HEADER,
                                       {?HTTP_HEADER_RESP_ETAG, ?http_etag(Digest_1)}],
                             ?reply_ok(Header, Req);

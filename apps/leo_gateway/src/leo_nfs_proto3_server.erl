@@ -2,7 +2,7 @@
 %%
 %% Leo Gateway
 %%
-%% Copyright (c) 2012-2015 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -244,9 +244,10 @@ nfsproc3_create_3({{{UID}, Name}, {_CreateMode,_How}} = _1, Clnt, State) ->
     {ok, Dir} = leo_nfs_state_ets:get_path(UID),
     Key = filename:join(Dir, Name),
 
-    case leo_gateway_rpc_handler:put(#put_req_params{path = Key,
-                                                     body = ?BIN_EMPTY,
-                                                     dsize = 0}) of
+    case leo_gateway_rpc_handler:put(
+           #request{key = Key,
+                    data = ?BIN_EMPTY,
+                    dsize = 0}) of
         {ok,_}->
             {ok, FileUID} = leo_nfs_state_ets:add_path(Key),
             TS = calendar:datetime_to_gregorian_seconds(calendar:universal_time()),
@@ -273,9 +274,10 @@ nfsproc3_mkdir_3({{{UID}, Name},_How} = _1, Clnt, State) ->
     DirPath = filename:join(Dir, Name),
     Key = filename:join(DirPath, ?NFS_DUMMY_FILE4S3DIR),
 
-    case leo_gateway_rpc_handler:put(#put_req_params{path = Key,
-                                                     body = ?BIN_EMPTY,
-                                                     dsize = 0}) of
+    case leo_gateway_rpc_handler:put(
+           #request{key = Key,
+                    data = ?BIN_EMPTY,
+                    dsize = 0}) of
         {ok,_}->
             {reply, {?NFS3_OK, {{false, void}, %% post_op file handle
                                 {false, void}, %% post_op_attr

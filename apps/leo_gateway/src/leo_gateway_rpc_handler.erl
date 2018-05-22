@@ -23,6 +23,7 @@
 
 -include("leo_http.hrl").
 -include("leo_gateway.hrl").
+-include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
 -include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
@@ -36,10 +37,9 @@
          get/2,
          get/3,
          get_dir_meta/1,
+         get_bucket/4,
          delete/1,
-         put/1,
-         invoke/5,
-         get_request_parameters/2
+         put/1
         ]).
 
 -record(rpc_params, {req_id = 0 :: non_neg_integer(),
@@ -48,158 +48,155 @@
                      redundancies = [] :: [#redundant_node{}]
                     }).
 
+-define(MOD_STORAGE_OBJ_HANDLER, 'leo_storage_handler_object').
+-define(MOD_STORAGE_DIR_HANDLER, 'leo_storage_handler_directory').
+
 
 %% @doc Retrieve a metadata from the storage-cluster
--spec(head(binary()) ->
-             {ok, #?METADATA{}}|{error, any()}).
+-spec(head(Key) ->
+             {ok, #?METADATA{}}|{error, any()} when Key::binary()).
 head(Key) ->
-    ReqParams = get_request_parameters(head, Key),
-    invoke(ReqParams#rpc_params.redundancies,
-           leo_storage_handler_object,
-           head,
-           [ReqParams#rpc_params.addr_id, Key],
-           []).
+    #rpc_params{redundancies = Reds,
+                addr_id = AddrId,
+                req_id = ReqId} = get_request_parameters(?HTTP_HEAD_ATOM, Key),
+    invoke(Reds, ?MOD_STORAGE_OBJ_HANDLER, head, #request{method = ?HTTP_HEAD_ATOM,
+                                                          addr_id = AddrId,
+                                                          key = Key,
+                                                          req_id = ReqId}).
 
 
 %% @doc Retrieve an object from the storage-cluster
--spec(get(binary()) ->
-             {ok, #?METADATA{}, binary()}|{error, any()}).
+-spec(get(Key) ->
+             {ok, #?METADATA{}, binary()}|{error, any()} when Key::binary()).
 get(Key) ->
     ok = leo_metrics_req:notify(?STAT_COUNT_GET),
-    ReqParams = get_request_parameters(get, Key),
-    invoke(ReqParams#rpc_params.redundancies,
-           leo_storage_handler_object,
-           get,
-           [ReqParams#rpc_params.addr_id, Key, ReqParams#rpc_params.req_id],
-           []).
--spec(get(binary(), integer()) ->
-             {ok, match}|{ok, #?METADATA{}, binary()}|{error, any()}).
+    #rpc_params{redundancies = Reds,
+                addr_id = AddrId,
+                req_id = ReqId} = get_request_parameters(?HTTP_GET_ATOM, Key),
+    invoke(Reds, ?MOD_STORAGE_OBJ_HANDLER, get, #request{method = ?HTTP_GET_ATOM,
+                                                         addr_id = AddrId,
+                                                         key = Key,
+                                                         req_id = ReqId}).
+
+-spec(get(Key, ETag) ->
+             {ok, match}|{ok, #?METADATA{}, binary()}|{error, any()} when Key::binary(),
+                                                                          ETag::non_neg_integer()).
 get(Key, ETag) ->
     ok = leo_metrics_req:notify(?STAT_COUNT_GET),
-    ReqParams = get_request_parameters(get, Key),
-    invoke(ReqParams#rpc_params.redundancies,
-           leo_storage_handler_object,
-           get,
-           [ReqParams#rpc_params.addr_id, Key, ETag, ReqParams#rpc_params.req_id],
-           []).
+    #rpc_params{redundancies = Reds,
+                addr_id = AddrId,
+                req_id = ReqId} = get_request_parameters(?HTTP_GET_ATOM, Key),
+    invoke(Reds, ?MOD_STORAGE_OBJ_HANDLER, get, #request{method = ?HTTP_GET_ATOM,
+                                                         addr_id = AddrId,
+                                                         key = Key,
+                                                         checksum = ETag,
+                                                         req_id = ReqId}).
 
--spec(get(binary(), integer(), integer()) ->
-             {ok, #?METADATA{}, binary()}|{error, any()}).
+-spec(get(Key, StartPos, EndPos) ->
+             {ok, #?METADATA{}, binary()}|{error, any()} when Key::binary(),
+                                                              StartPos::integer(),
+                                                              EndPos::integer()).
 get(Key, StartPos, EndPos) ->
     ok = leo_metrics_req:notify(?STAT_COUNT_GET),
-    ReqParams = get_request_parameters(get, Key),
-    invoke(ReqParams#rpc_params.redundancies,
-           leo_storage_handler_object,
-           get,
-           [ReqParams#rpc_params.addr_id,
-            Key, StartPos, EndPos,
-            ReqParams#rpc_params.req_id],
-           []).
+    #rpc_params{redundancies = Reds,
+                addr_id = AddrId,
+                req_id = ReqId} = get_request_parameters(?HTTP_GET_ATOM, Key),
+    invoke(Reds, ?MOD_STORAGE_OBJ_HANDLER, get, #request{method = ?HTTP_GET_ATOM,
+                                                         addr_id = AddrId,
+                                                         key = Key,
+                                                         start_pos = StartPos, %% @TODO
+                                                         end_pos = EndPos,     %% @TODO
+                                                         req_id = ReqId}).
 
 
 %% @doc Retrieve a directory metadata encoded into binary from the storage-cluster
--spec(get_dir_meta(binary()) ->
-             {ok, binary()}|{error, any()}).
+-spec(get_dir_meta(Key) ->
+             {ok, binary()}|{error, any()} when Key::binary()).
 get_dir_meta(Key) ->
-    ReqParams = get_request_parameters(get, Key),
-    invoke(ReqParams#rpc_params.redundancies,
-           leo_storage_handler_directory,
-           get,
-           [Key],
-           []).
+    #rpc_params{redundancies = Reds,
+                addr_id = AddrId,
+                req_id = ReqId} = get_request_parameters(?HTTP_GET_ATOM, Key),
+    invoke(Reds, ?MOD_STORAGE_DIR_HANDLER,
+           find_by_parent_dir, #request{method = ?HTTP_GET_ATOM,
+                                        addr_id = AddrId,
+                                        key = Key,
+                                        req_id = ReqId}).
+
+
+%% @doc Retrieve a list of metadata
+-spec(get_bucket(Key, Delimitar, Marker, MaxKeys) ->
+             {ok, MetadataL} | {error, any()} when Key::binary(),
+                                                   Delimitar::binary(),
+                                                   Marker::binary(),
+                                                   MaxKeys::non_neg_integer(),
+                                                   MetadataL::[#?METADATA{}]).
+get_bucket(Key, Delimitar, Marker, MaxKeys) ->
+    #rpc_params{redundancies = Reds,
+                addr_id = AddrId,
+                req_id = ReqId} = get_request_parameters(?HTTP_GET_ATOM, Key),
+    invoke(Reds, ?MOD_STORAGE_DIR_HANDLER,
+           find_by_parent_dir, #request{method = ?HTTP_GET_ATOM,
+                                        addr_id = AddrId,
+                                        key = Key,
+                                        delimitar = Delimitar,
+                                        marker = Marker,
+                                        max_keys = MaxKeys,
+                                        req_id = ReqId}).
 
 
 %% @doc Remove an object from storage-cluster
--spec(delete(binary()) ->
-             ok|{error, any()}).
+-spec(delete(Key) ->
+             ok|{error, any()} when Key::binary()).
 delete(Key) ->
     ok = leo_metrics_req:notify(?STAT_COUNT_DEL),
-    ReqParams = get_request_parameters(delete, Key),
-    invoke(ReqParams#rpc_params.redundancies,
-           leo_storage_handler_object,
-           delete,
-           [#?OBJECT{addr_id = ReqParams#rpc_params.addr_id,
-                     key = Key,
-                     timestamp = ReqParams#rpc_params.timestamp},
-            ReqParams#rpc_params.req_id],
-           []).
+    #rpc_params{redundancies = Reds,
+                addr_id = AddrId,
+                timestamp = Timestamp,
+                req_id = ReqId} = get_request_parameters(?HTTP_DELETE_ATOM, Key),
+    invoke(Reds, ?MOD_STORAGE_OBJ_HANDLER, delete, #request{method = ?HTTP_DELETE_ATOM,
+                                                            addr_id = AddrId,
+                                                            key = Key,
+                                                            timestamp = Timestamp,
+                                                            req_id = ReqId}).
 
 
 %% @doc Insert an object into the storage-cluster (regular-case)
 -spec(put(ReqParams) ->
-             ok|{ok, pos_integer()}|{error, any()} when ReqParams::#put_req_params{}).
-put(#put_req_params{path = Key,
-                    body = Body,
-                    dsize = Size,
-                    meta = CMeta,
-                    msize = MSize,
-                    total_chunks = TotalChunks,
-                    cindex = ChunkIndex,
-                    csize = ChunkedSize,
-                    digest = Digest
-                    %% === NOTE: for 1.4.0 >>>
-                    %% bucket_info = BucketInfo
-                    %% <<<
-                   }) ->
+             ok|{ok, pos_integer()}|{error, any()} when ReqParams::#request{}).
+put(#request{key = Key} = Req) ->
     ok = leo_metrics_req:notify(?STAT_COUNT_PUT),
-
-    %% === NOTE: for 1.4.0 >>>
-    %% #?BUCKET{redundancy_method = RedMethod,
-    %%          cp_params = CPParams,
-    %%          ec_lib = ECLib,
-    %%          ec_params = ECParams} =
-    %%     case BucketInfo of
-    %%         undefined ->
-    %%             BucketName =
-    %%                 erlang:hd(
-    %%                   leo_misc:binary_tokens(Key, <<"/">>)),
-    %%             case catch leo_s3_bucket:get_latest_bucket(BucketName) of
-    %%                 {ok, #?BUCKET{} = BucketInfo_1} ->
-    %%                     BucketInfo_1;
-    %%                 _ ->
-    %%                     #?BUCKET{name = BucketName}
-    %%             end;
-    %%         _ ->
-    %%             BucketInfo
-    %%     end,
-    %% <<<
-
-    #rpc_params{addr_id = AddrId,
-                redundancies = Redundancies,
+    #rpc_params{redundancies = Reds,
+                addr_id = AddrId,
                 timestamp = Timestamp,
                 req_id = ReqId} = get_request_parameters(put, Key),
-    invoke(Redundancies, leo_storage_handler_object, put,
-           [#?OBJECT{addr_id = AddrId,
-                     key = Key,
-                     data = Body,
-                     meta = CMeta,
-                     dsize = Size,
-                     msize = MSize,
-                     timestamp = Timestamp,
-                     csize = ChunkedSize,
-                     cnumber = TotalChunks,
-                     cindex = ChunkIndex,
-                     checksum = Digest
-                     %% === NOTE: for 1.4.0 >>>
-                     %% redundancy_method = RedMethod,
-                     %% cp_params = CPParams,
-                     %% ec_lib = ECLib,
-                     %% ec_params = ECParams
-                     %% <<<
-                    }, ReqId], []).
+    invoke(Reds, ?MOD_STORAGE_OBJ_HANDLER, put, Req#request{method = ?HTTP_PUT_ATOM,
+                                                            addr_id = AddrId,
+                                                            timestamp = Timestamp,
+                                                            req_id = ReqId}).
 
 
 %% @doc Do invoke rpc calls with handling retries
--spec(invoke(list(), atom(), atom(), list(), list()) ->
-             ok|{ok, any()}|{ok, #?METADATA{}, binary()}|{error, any()}).
-invoke([], _Mod, _Method, _Args, Errors) ->
+%% @private
+-spec(invoke(Reds, Mod, Method, ReqParams) ->
+             ok|{ok, any()}|{ok, #?METADATA{}, Bin}|{error, any()} when Reds::[#redundant_node{}],
+                                                                        Mod::module(),
+                                                                        Method::http_verb_atom(),
+                                                                        ReqParams::#request{},
+                                                                        Bin::binary()).
+invoke(Reds, Mod, Method, ReqParams) ->
+    invoke(Reds, Mod, Method, ReqParams, []).
+
+%% @private
+invoke([],_,_,_,Errors) ->
     {error, error_filter(Errors)};
-invoke([#redundant_node{available = false}|T], Mod, Method, Args, Errors) ->
-    invoke(T, Mod, Method, Args, [?ERR_TYPE_INTERNAL_ERROR|Errors]);
+invoke([#redundant_node{available = false}|T], Mod, Method, ReqParams, Errors) ->
+    invoke(T, Mod, Method, ReqParams, [?ERR_TYPE_INTERNAL_ERROR|Errors]);
+
 invoke([#redundant_node{node = Node,
-                        available = true}|T], Mod, Method, Args, Errors) ->
-    Timeout = timeout(Method, Args),
-    case rpc:call(Node, Mod, Method, Args, Timeout) of
+                        available = true}|T], Mod, Method, ReqParams, Errors) ->
+    %% #request{method = Method} = ReqParams,
+    Timeout = timeout(Method, [ReqParams]),
+    case rpc:call(Node, Mod, Method, [ReqParams], Timeout) of
         %% is_dir
         Ret when is_boolean(Ret) ->
             Ret;
@@ -222,15 +219,16 @@ invoke([#redundant_node{node = Node,
             Ret;
         %% find_by_parent_dir
         {ok, MetaL} when is_list(MetaL) ->
-            TMetaL = lists:foldl(fun(Meta, Acc) ->
-                                         Out = case leo_object_storage_transformer:transform_metadata(Meta) of
-                                                   {error, _} ->
-                                                       Meta;
-                                                   Meta_1 ->
-                                                       Meta_1
-                                               end,
-                                         [Out | Acc]
-                                 end, [], MetaL),
+            TMetaL = lists:foldl(
+                       fun(Meta, Acc) ->
+                               Meta_2 = case leo_object_storage_transformer:transform_metadata(Meta) of
+                                            {error,_} ->
+                                                Meta;
+                                            Meta_1 ->
+                                                Meta_1
+                                        end,
+                               [Meta_2 | Acc]
+                       end, [], MetaL),
             {ok, lists:reverse(TMetaL)};
         %% head/get_dir_meta
         {ok, Meta} ->
@@ -240,11 +238,11 @@ invoke([#redundant_node{node = Node,
                 Meta_1 ->
                     {ok, Meta_1}
             end;
-        {badrpc, _Cause} = Error ->
-            E = handle_error(Node, Mod, Method, Args, Error),
-            invoke(T, Mod, Method, Args, [E|Errors]);
+        {badrpc,_Cause} = Error ->
+            E = handle_error(Node, Mod, Method, ReqParams, Error),
+            invoke(T, Mod, Method, ReqParams, [E|Errors]);
         Error ->
-            {error, handle_error(Node, Mod, Method, Args, Error)}
+            {error, handle_error(Node, Mod, Method, ReqParams, Error)}
     end.
 
 
@@ -284,12 +282,12 @@ handle_error(_Node,_Mod,_Method,_Args, {error, not_found = Error}) ->
     Error;
 handle_error(_Node,_Mod,_Method,_Args, {error, unavailable = Error}) ->
     Error;
-handle_error(Node, Mod, Method, _Args, {error, Cause}) ->
+handle_error(Node, Mod, Method,_Args, {error, Cause}) ->
     ?warn("handle_error/5",
           [{node, Node}, {mod, Mod},
            {method, Method}, {cause, Cause}]),
     ?ERR_TYPE_INTERNAL_ERROR;
-handle_error(Node, Mod, Method, _Args, {badrpc, Cause}) ->
+handle_error(Node, Mod, Method,_Args, {badrpc, Cause}) ->
     ?warn("handle_error/5",
           [{node, Node}, {mod, Mod},
            {method, Method}, {cause, Cause}]),
@@ -308,9 +306,9 @@ timeout(Len) when ?TIMEOUT_L3_LEN > Len -> ?env_timeout_level_3();
 timeout(Len) when ?TIMEOUT_L4_LEN > Len -> ?env_timeout_level_4();
 timeout(_)                              -> ?env_timeout_level_5().
 
-timeout(put, [#?OBJECT{dsize = DSize}, _]) ->
+timeout(put, [#request{dsize = DSize}]) ->
     timeout(DSize);
-timeout(get, _) -> ?env_timeout_for_get();
-timeout(find_by_parent_dir, _) -> ?env_timeout_for_ls();
-timeout(_, _) ->
+timeout(get,_) -> ?env_timeout_for_get();
+timeout(find_by_parent_dir,_) -> ?env_timeout_for_ls();
+timeout(_,_) ->
     ?DEF_REQ_TIMEOUT.

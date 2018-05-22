@@ -24,6 +24,7 @@
 
 -include("leo_gateway.hrl").
 -include("leo_http.hrl").
+-include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
 -include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
@@ -66,7 +67,7 @@
              ok | {error, any()} when Key::binary(),
                                       Length::non_neg_integer()).
 start_link(Key, Length) ->
-    BucketName = erlang:hd(leo_misc:binary_tokens(Key, <<"/">>)),
+    BucketName = erlang:hd(leo_misc:binary_tokens(Key, ?BIN_SLASH)),
     BucketInfo = #?BUCKET{name = BucketName},
     start_link(BucketInfo, Key, Length).
 
@@ -125,8 +126,7 @@ init([BucketInfo, Key, Length]) ->
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 
-handle_call({put, Bin}, _From, #state{bucket_info = BucketInfo,
-                                      key = Key,
+handle_call({put, Bin}, _From, #state{key = Key,
                                       max_obj_len = MaxObjLen,
                                       stacked_bin = StackedBin,
                                       num_of_chunks = NumOfChunks,
@@ -146,11 +146,11 @@ handle_call({put, Bin}, _From, #state{bucket_info = BucketInfo,
                             ?DEF_SEPARATOR/binary,
                             NumOfChunksBin/binary >>,
             {Ret, State_1} =
-                case send_object(#put_req_params{path = ChunkedKey,
-                                                 body = Bin_2,
-                                                 dsize = MaxObjLen,
-                                                 cindex = NumOfChunks,
-                                                 bucket_info = BucketInfo}, leo_date:clock()) of
+                case send_object(
+                       #request{key = ChunkedKey,
+                                data = Bin_2,
+                                dsize = MaxObjLen,
+                                cindex = NumOfChunks}, leo_date:clock()) of
                     {ok, SpawnRet} ->
                         Context_1 = crypto:hash_update(Context, Bin_2),
                         << Head:8/binary, _Rest/binary>> = Bin_2,
@@ -185,8 +185,7 @@ handle_call(rollback, _From, #state{key = Key} = State) ->
     {reply, ok, State#state{errors = []}};
 
 
-handle_call(result, _From, #state{bucket_info = BucketInfo,
-                                  key = Key,
+handle_call(result, _From, #state{key = Key,
                                   md5_context = Context,
                                   stacked_bin = StackedBin,
                                   num_of_chunks = NumOfChunks,
@@ -202,12 +201,10 @@ handle_call(result, _From, #state{bucket_info = BucketInfo,
                   Key_1 = << Key/binary,
                              ?DEF_SEPARATOR/binary,
                              NumOfChunksBin/binary >>,
-                  case leo_gateway_rpc_handler:put(
-                         #put_req_params{path = Key_1,
-                                         body = StackedBin,
-                                         dsize = Size,
-                                         cindex = NumOfChunks,
-                                         bucket_info = BucketInfo}) of
+                  case leo_gateway_rpc_handler:put(#request{key = Key_1,
+                                                            data = StackedBin,
+                                                            dsize = Size,
+                                                            cindex = NumOfChunks}) of
                       {ok,_ETag} ->
                           {ok, {NumOfChunks,
                                 crypto:hash_update(Context, StackedBin)}};
@@ -278,18 +275,17 @@ code_change(_OldVsn, State, _Extra) ->
 %%====================================================================
 %% @doc Checkout a worker and execute the request
 %% @private
--spec(send_object(PutReq, Times) ->
-             {ok, SpawnRet} | {error, Cause} when PutReq::#put_req_params{},
+-spec(send_object(Req, Times) ->
+             {ok, SpawnRet} | {error, Cause} when Req::#request{},
                                                   Times::non_neg_integer(),
                                                   SpawnRet::{pid(), reference()},
                                                   Cause::any()).
-send_object(PutReq, BeginTime) ->
-    Key = PutReq#put_req_params.path,
-
+send_object(#request{key = Key} = Req, BeginTime) ->
     case leo_pod:checkout(?POD_LOH_WORKER) of
         {ok, Worker} ->
             Fun = fun() ->
-                          Ret = case catch gen_server:call(Worker, {put, PutReq}, infinity) of
+                          %% NOTE: worker calls `leo_gateway_rpc_handler:put/1`
+                          Ret = case catch gen_server:call(Worker, {put, Req}, infinity) of
                                     {'EXIT', {Reason, _Stack}} ->
                                         {error, Reason};
                                     Result ->
@@ -311,7 +307,7 @@ send_object(PutReq, BeginTime) ->
                     {error, Cause};
                 false ->
                     timer:sleep(?DEF_WAIT_TIME_OF_CHECKOUT),
-                    send_object(PutReq, BeginTime)
+                    send_object(Req, BeginTime)
             end
     end.
 
