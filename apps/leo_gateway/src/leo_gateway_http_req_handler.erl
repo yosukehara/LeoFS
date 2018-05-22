@@ -75,15 +75,17 @@ handle(?HTTP_HEAD, Req, Key, #req_params{is_dir = true,
 %% For OBJECT-OPERATION
 %% ---------------------------------------------------------------------
 %% @doc GET operation on Object with Range Header.
-handle(?HTTP_GET, Req, Key, #req_params{range_header = RangeHeader,
-                                        handler = Handler} = Params) when RangeHeader /= undefined ->
+handle(?HTTP_GET, Req, Key,
+       #req_params{range_header = RangeHeader,
+                   handler = Handler} = Params) when RangeHeader /= undefined ->
     Handler:range_object(Req, Key, Params);
 
 %% @doc GET operation on Object if inner cache is enabled.
 %% @private
-handle(?HTTP_GET = HTTPMethod, Req, Key, #req_params{is_cached = true,
-                                                     has_inner_cache = true,
-                                                     handler = Handler} = Params) ->
+handle(?HTTP_GET = HTTPMethod, Req, Key,
+       #req_params{is_cached = true,
+                   has_inner_cache = true,
+                   handler = Handler} = Params) ->
     case catch leo_cache_api:get_filepath(Key) of
         {ok, CacheMeta} when CacheMeta#cache_meta.file_path /= [] ->
             CachedObj = #cache{etag = CacheMeta#cache_meta.md5,
@@ -128,4 +130,3 @@ handle(?HTTP_HEAD, Req, Key, #req_params{handler = Handler} = Params) ->
 handle(_, Req, Key, _) ->
     ?reply_bad_request([?SERVER_HEADER], ?XML_ERROR_CODE_InvalidArgument,
                        ?XML_ERROR_MSG_InvalidArgument, Key, <<>>, Req).
-

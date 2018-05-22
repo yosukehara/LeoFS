@@ -18,6 +18,9 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
+%% -------------------------------------------------------------------
+%% @doc LeoFS Gateway - S3 domainogics Test
+%% @end
 %%====================================================================
 -module(leo_gateway_web_tests).
 
@@ -40,15 +43,15 @@ s3_api_test_() ->
     {setup,
      fun setup_s3_api/0,
      fun teardown/1,
-     fun gen_tests_1/1}.
+     fun gen_tests_for_s3_api/1}.
 
 rest_api_test_() ->
     {setup,
      fun setup_rest_api/0,
      fun teardown/1,
-     fun gen_tests_2/1}.
+     fun gen_tests_for_rest_api/1}.
 
-gen_tests_1(Arg) ->
+gen_tests_for_s3_api(Arg) ->
     lists:map(fun(Test) -> Test(Arg) end,
               [fun get_bucket_list_error_/1,
                fun get_bucket_list_empty_/1,
@@ -76,7 +79,7 @@ gen_tests_1(Arg) ->
                fun put_object_aws_chunked_error_/1
               ]).
 
-gen_tests_2(Arg) ->
+gen_tests_for_rest_api(Arg) ->
     lists:map(fun(Test) -> Test(Arg) end,
               [fun head_object_error_/1,
                fun head_object_notfound_/1,
@@ -143,9 +146,8 @@ gen_tests_2(Arg) ->
 setup(InitFun, TermFun) ->
     ok = leo_logger_api:new("./", ?LOG_LEVEL_INFO),
     ok = leo_logger_api:new(?LOG_GROUP_ID_ACCESS, ?LOG_ID_ACCESS,
-                                    "./", ?LOG_FILENAME_ACCESS),
+                            "./", ?LOG_FILENAME_ACCESS),
 
-    io:format(user, "~n~n~n:::~p:::START:::~n",[?MODULE]),
     io:format(user, "cwd:~p~n",[os:cmd("pwd")]),
     [] = os:cmd("epmd -daemon"),
     {ok, Hostname} = inet:gethostname(),
@@ -177,8 +179,9 @@ setup(InitFun, TermFun) ->
     meck:expect(leo_s3_bucket, get_latest_bucket,
                 fun(_BucketName) ->
                         {ok, #?BUCKET{name =_BucketName,
-                                      acls = [#bucket_acl_info{user_id = ?GRANTEE_ALL_USER,
-                                                               permissions = [read, write]}]}}
+                                      acls = [#bucket_acl_info{
+                                                 user_id = ?GRANTEE_ALL_USER,
+                                                 permissions = [read, write]}]}}
                 end),
 
     Date = erlang:list_to_binary(leo_http:rfc1123_date(leo_date:now())),
@@ -190,6 +193,9 @@ setup(InitFun, TermFun) ->
 
     meck:new(leo_metrics_req, [non_strict]),
     meck:expect(leo_metrics_req, notify, fun(_) -> ok end),
+
+    ok = rpc:call(Node0, meck, new,    [leo_metrics_req, [no_link, non_strict]]),
+    ok = rpc:call(Node0, meck, expect, [leo_metrics_req, notify, fun(_) -> ok end]),
     ok = rpc:call(Node1, meck, new,    [leo_metrics_req, [no_link, non_strict]]),
     ok = rpc:call(Node1, meck, expect, [leo_metrics_req, notify, fun(_) -> ok end]),
 
@@ -212,38 +218,30 @@ setup(InitFun, TermFun) ->
     [TermFun, Node0, Node1].
 
 setup_s3_api() ->
+    io:format(user, "~s~n",["::: S3 API :::"]),
     application:start(crypto),
     application:start(ranch),
     application:start(cowboy),
 
-    ?debugVal(":::: S3 :::"),
-
     {ok, Options} = leo_gateway_app:get_options(),
-    InitFun = fun() ->
-                      leo_gateway_http_commons:start(
-                        Options#http_options{port = 12345})
-              end,
-    TermFun = fun() ->
-                      leo_gateway_s3_api:stop()
-              end,
+    InitFun = fun() -> leo_gateway_http_commons:start(
+                         Options#http_options{
+                           handler = leo_gateway_s3_api,
+                           port = 12345}) end,
+    TermFun = fun() -> leo_gateway_s3_api:stop() end,
     setup(InitFun, TermFun).
 
 setup_rest_api() ->
+    io:format(user, "~s~n",["::: REST API :::"]),
     application:start(crypto),
     application:start(ranch),
     application:start(cowboy),
 
-    ?debugVal(":::: REST :::"),
-
     {ok, Options} = leo_gateway_app:get_options(),
-    InitFun = fun() ->
-                      leo_gateway_http_commons:start(
-                        Options#http_options{handler = leo_gateway_rest_api,
-                                             port = 12345})
-              end,
-    TermFun = fun() ->
-                      leo_gateway_rest_api:stop()
-              end,
+    InitFun = fun() -> leo_gateway_http_commons:start(
+                         Options#http_options{handler = leo_gateway_rest_api,
+                                              port = 12345}) end,
+    TermFun = fun() -> leo_gateway_rest_api:stop() end,
     setup(InitFun, TermFun).
 
 teardown([TermFun, Node0, Node1]) ->
@@ -264,39 +262,25 @@ teardown([TermFun, Node0, Node1]) ->
     leo_cache_api:stop(),
     leo_logger_api:stop(),
     timer:sleep(250),
-    io:format(user, "~n~n~n:::~p:::END:::~n",[?MODULE]),
     ok.
 
-get_bucket_list_error_([_TermFun, Node0, Node1]) ->
+%% @doc Get Bucket List -> Error
+get_bucket_list_error_([_TermFun,_Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_bucket_list_error"]),
             timer:sleep(150),
-            ok = rpc:call(Node0, meck, new,
-                          [leo_storage_handler_directory, [no_link, non_strict]]),
-            ok = rpc:call(Node0, meck, expect, [leo_storage_handler_directory, find_by_parent_dir,
-                                                fun(_Req) ->
-                                                        io:format(user, "-req: ~~p:~n",[_Req]),
-                                                        {error, some_error}
-                                                end]),
-
-
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_directory, [no_link, non_strict]]),
-            ok = rpc:call(Node1, meck, expect, [leo_storage_handler_directory, find_by_parent_dir,
-                                                fun(_Req) ->
-                                                        io:format(user, "-req: ~~p:~n",[_Req]),
-                                                        {error, some_error}
-                                                end]),
-            %% ok = rpc:call(Node1, meck, expect,
-            %%               [leo_storage_handler_directory,
-            %%                find_by_parent_dir, 1, {error, some_error}]),
-
+            ok = rpc:call(Node1, meck, expect,
+                          [leo_storage_handler_directory,
+                           find_by_parent_dir, 1, {error, some_error}]),
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC, Body}} =
                     httpc:request(get, {lists:append(
-                                          ["http://", ?TARGET_HOST, ":12345/a/b?prefix=pre"]), [{"Date", Date}]},
+                                          ["http://", ?TARGET_HOST, ":12345/a/b?prefix=pre"]),
+                                        [{"Date", Date}]},
                                   [], [{full_result, false}]),
-                ?debugVal({SC, Body}),
 
                 %% req id is empty for now
                 Xml = io_lib:format(?XML_ERROR,
@@ -313,20 +297,21 @@ get_bucket_list_error_([_TermFun, Node0, Node1]) ->
             ok
     end.
 
-get_bucket_list_empty_([_TermFun, _Node0, Node1]) ->
+get_bucket_list_empty_([_TermFun,_Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_bucket_list_empty"]),
             timer:sleep(150),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_directory, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
-                          [leo_storage_handler_directory, find_by_parent_dir, 4, {ok, []}]),
+                          [leo_storage_handler_directory, find_by_parent_dir, 1, {ok, []}]),
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC, Body}} =
                     httpc:request(get, {lists:append(["http://",
                                                       ?TARGET_HOST,
                                                       ":12345/a/b?prefix=pre&delimiter=/"]),
-                                                      [{"Date", Date}]},
+                                        [{"Date", Date}]},
                                   [], [{full_result, false}]),
                 ?assertEqual(200, SC),
 
@@ -341,44 +326,40 @@ get_bucket_list_empty_([_TermFun, _Node0, Node1]) ->
             ok
     end.
 
-get_bucket_list_normal1_([_TermFun, _Node0, Node1]) ->
+get_bucket_list_normal1_([_TermFun,_Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_bucket_list_normal1"]),
             timer:sleep(150),
+            Metadata = #?METADATA{key = <<"localhost/a/b/pre/test.png">>,
+                                  addr_id    = 0,
+                                  ksize      = 8,
+                                  dsize      = 0,
+                                  meta       = <<>>,
+                                  msize      = 0,
+                                  csize      = 0,
+                                  cnumber    = 0,
+                                  cindex     = 0,
+                                  offset     = 0,
+                                  clock      = 63511805822,
+                                  timestamp  = 19740926,
+                                  checksum   = 0,
+                                  ring_hash  = 0,
+                                  cluster_id = [],
+                                  ver = 0,
+                                  del = ?DEL_FALSE},
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_directory, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
                           [leo_storage_handler_directory, find_by_parent_dir,
-                           4, {ok,
-                               [#?METADATA{
-                                    key = <<"localhost/a/b/pre/test.png">>,
-                                    addr_id    = 0,
-                                    ksize      = 8,
-                                    dsize      = 0,
-                                    meta       = <<>>,
-                                    msize      = 0,
-                                    csize      = 0,
-                                    cnumber    = 0,
-                                    cindex     = 0,
-                                    offset     = 0,
-                                    clock      = 63511805822,
-                                    timestamp  = 19740926,
-                                    checksum   = 0,
-                                    ring_hash  = 0,
-                                    cluster_id = [],
-                                    ver = 0,
-                                    del = ?DEL_FALSE
-                                   }
-                                %% {metadata, <<"localhost/a/b/pre/test.png">>,
-                                %%  0, 8, 0, 0,
-                                %%  0, 0, 0,
-                                %%  0, 0, 63511805822, 19740926, 0, 0}
-                               ]}]),
+                           1, {ok,[Metadata]}]),
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC,Body}} =
-                    httpc:request(get, {lists:append(["http://",
-                                                      ?TARGET_HOST,
-                                                      ":12345/a/b/?prefix=pre&delimiter=/"]), [{"Date", Date}]},
+                    httpc:request(get, {lists:append(
+                                          ["http://",
+                                           ?TARGET_HOST,
+                                           ":12345/a/b/?prefix=pre&delimiter=/"]),
+                                        [{"Date", Date}]},
                                   [], [{full_result, false}]),
                 ?assertEqual(200, SC),
                 {_XmlDoc, Rest} = xmerl_scan:string(Body),
@@ -394,6 +375,7 @@ get_bucket_list_normal1_([_TermFun, _Node0, Node1]) ->
 
 get_bucket_acl_normal1_([_TermFun, _Node0,_Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_bucket_acl_normal1"]),
             timer:sleep(150),
             %% leo_s3_bucket is already created at setup
             meck:expect(leo_s3_bucket, get_acls, 1,
@@ -402,20 +384,24 @@ get_bucket_acl_normal1_([_TermFun, _Node0,_Node1]) ->
             meck:expect(leo_s3_bucket, find_bucket_by_name, 1,
                         {ok, #?BUCKET{name = "bucket",
                                       access_key_id = <<"ackid">>,
-                                      acls = [#bucket_acl_info{user_id = ?GRANTEE_ALL_USER,
-                                                               permissions = [read, write]},
-                                              #bucket_acl_info{user_id = ?GRANTEE_AUTHENTICATED_USER,
-                                                               permissions = [full_control]}]
+                                      acls = [#bucket_acl_info{
+                                                 user_id = ?GRANTEE_ALL_USER,
+                                                 permissions = [read, write]},
+                                              #bucket_acl_info{
+                                                 user_id = ?GRANTEE_AUTHENTICATED_USER,
+                                                 permissions = [full_control]}]
                                      }}),
             meck:new(leo_s3_auth, [no_link, non_strict]),
             meck:expect(leo_s3_auth, authenticate, 3, {ok, ["hoge"], undefined}),
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC,Body}} =
-                    httpc:request(get, {lists:append(["http://",
-                                                      ?TARGET_HOST,
-                                                      ":12345/bucket?acl"]),
-                                        [{"Date", Date}, {"Authorization","AWS auth:hoge"}]},
+                    httpc:request(get,
+                                  {lists:append(
+                                     ["http://",
+                                      ?TARGET_HOST,
+                                      ":12345/bucket?acl"]),
+                                   [{"Date", Date}, {"Authorization","AWS auth:hoge"}]},
                                   [], [{full_result, false}]),
                 ?assertEqual(200, SC),
                 {_XmlDoc, Rest} = xmerl_scan:string(Body),
@@ -428,8 +414,10 @@ get_bucket_acl_normal1_([_TermFun, _Node0,_Node1]) ->
             end,
             ok
     end.
+
 head_object_notfound_([_TermFun, Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- head_object_notfound"]),
             ok = rpc:call(Node0, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node0, meck, expect,
@@ -458,6 +446,7 @@ head_object_notfound_([_TermFun, Node0, Node1]) ->
 
 head_object_error_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- head_object_error"]),
             ok = rpc:call(Node1, meck, new,    [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect, [leo_storage_handler_object, head, 1, {error, foobar}]),
 
@@ -480,36 +469,38 @@ head_object_error_([_TermFun, _Node0, Node1]) ->
 
 head_object_normal1_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- head_object_normal1"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
                           [leo_storage_handler_object, head, 1,
                            {ok, #?METADATA{
-                                    key =  <<"a/b/c/d.png">>,
-                                    addr_id    = 0,
-                                    ksize      = 4,
-                                    dsize      = 16384,
-                                    meta       = <<>>,
-                                    msize      = 0,
-                                    csize      = 0,
-                                    cnumber    = 0,
-                                    cindex     = 0,
-                                    offset     = 1,
-                                    clock      = 63511805822,
-                                    timestamp  = 19740926,
-                                    checksum   = 0,
-                                    ring_hash  = 0,
-                                    cluster_id = [],
-                                    ver = 0,
-                                    del = ?DEL_FALSE
-                                   }
+                                           key =  <<"a/b/c/d.png">>,
+                                           addr_id    = 0,
+                                           ksize      = 4,
+                                           dsize      = 16384,
+                                           meta       = <<>>,
+                                           msize      = 0,
+                                           csize      = 0,
+                                           cnumber    = 0,
+                                           cindex     = 0,
+                                           offset     = 1,
+                                           clock      = 63511805822,
+                                           timestamp  = 19740926,
+                                           checksum   = 0,
+                                           ring_hash  = 0,
+                                           cluster_id = [],
+                                           ver = 0,
+                                           del = ?DEL_FALSE
+                                          }
                            }]),
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {{_, SC, _}, Headers, _Body}} =
-                    httpc:request(head, {lists:append(["http://",
-                                                       ?TARGET_HOST,
-                                                       ":12345/a/b/c/d.png"]),
+                    httpc:request(head, {lists:append(
+                                           ["http://",
+                                            ?TARGET_HOST,
+                                            ":12345/a/b/c/d.png"]),
                                          [{"Date", Date}, {"connection", "close"}]}, [], []),
                 %% https://github.com/leo-project/leofs/issues/489#issuecomment-265389401
                 %% exists only content-length header
@@ -528,6 +519,7 @@ head_object_normal1_([_TermFun, _Node0, Node1]) ->
 
 get_object_error_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_object_error"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
@@ -535,10 +527,12 @@ get_object_error_([_TermFun, _Node0, Node1]) ->
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC, Body}} =
-                    httpc:request(get, {lists:append(["http://",
-                                                      ?TARGET_HOST,
-                                                      ":12345/a/b.png"]),
-                                        [{"Date", Date}]}, [], [{full_result, false}]),
+                    httpc:request(get, {lists:append(
+                                          ["http://",
+                                           ?TARGET_HOST,
+                                           ":12345/a/b.png"]),
+                                        [{"Date", Date}]}, [],
+                                  [{full_result, false}]),
 
                 %% req id is empty for now
                 Xml = io_lib:format(?XML_ERROR,
@@ -558,6 +552,7 @@ get_object_error_([_TermFun, _Node0, Node1]) ->
 
 get_object_invalid_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_object_invalid"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
@@ -565,10 +560,12 @@ get_object_invalid_([_TermFun, _Node0, Node1]) ->
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC, _Body}} =
-                    httpc:request(head, {lists:append(["http://",
-                                                       ?TARGET_HOST,
-                                                       ":12345/"]),
-                                         [{"Date", Date}, {"Host", ""}]},
+                    httpc:request(head, {lists:append(
+                                           ["http://",
+                                            ?TARGET_HOST,
+                                            ":12345/"]),
+                                         [{"Date", Date},
+                                          {"Host", ""}]},
                                   [{version, "HTTP/1.0"}], [{full_result, false}]),
 
                 ?assertEqual(400, SC)
@@ -583,6 +580,7 @@ get_object_invalid_([_TermFun, _Node0, Node1]) ->
 
 get_object_notfound_([_TermFun, Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_object_notfound"]),
             ok = rpc:call(Node0, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node0, meck, expect,
@@ -594,10 +592,12 @@ get_object_notfound_([_TermFun, Node0, Node1]) ->
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC, Body}} =
-                    httpc:request(get, {lists:append(["http://",
-                                                      ?TARGET_HOST,
-                                                      ":12345/a/b/c.png"]),
-                                        [{"Date", Date}]}, [], [{full_result, false}]),
+                    httpc:request(get, {lists:append(
+                                          ["http://",
+                                           ?TARGET_HOST,
+                                           ":12345/a/b/c.png"]),
+                                        [{"Date", Date}]}, [],
+                                  [{full_result, false}]),
 
                 %% req id is empty for now
                 Xml = io_lib:format(?XML_ERROR,
@@ -618,29 +618,30 @@ get_object_notfound_([_TermFun, Node0, Node1]) ->
 
 get_object_normal1_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_object_normal1"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
                           [leo_storage_handler_object, get, 1,
                            {ok, #?METADATA{
-                                    key =  <<"">>,
-                                    addr_id    = 0,
-                                    ksize      = 4,
-                                    dsize      = 4,
-                                    meta       = <<>>,
-                                    msize      = 0,
-                                    csize      = 0,
-                                    cnumber    = 0,
-                                    cindex     = 0,
-                                    offset     = 1,
-                                    clock      = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
-                                    timestamp  = 19740926,
-                                    checksum   = 0,
-                                    ring_hash  = 0,
-                                    cluster_id = [],
-                                    ver = 0,
-                                    del = ?DEL_FALSE
-                                   },
+                                           key =  <<"">>,
+                                           addr_id    = 0,
+                                           ksize      = 4,
+                                           dsize      = 4,
+                                           meta       = <<>>,
+                                           msize      = 0,
+                                           csize      = 0,
+                                           cnumber    = 0,
+                                           cindex     = 0,
+                                           offset     = 1,
+                                           clock      = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
+                                           timestamp  = 19740926,
+                                           checksum   = 0,
+                                           ring_hash  = 0,
+                                           cluster_id = [],
+                                           ver = 0,
+                                           del = ?DEL_FALSE
+                                          },
                             <<"body">>}]),
 
             try
@@ -664,6 +665,7 @@ get_object_normal1_([_TermFun, _Node0, Node1]) ->
 
 get_object_cmeta_normal1_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_object_cmeta_normal1"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
 
@@ -671,24 +673,24 @@ get_object_cmeta_normal1_([_TermFun, _Node0, Node1]) ->
             ok = rpc:call(Node1, meck, expect,
                           [leo_storage_handler_object, get, 1,
                            {ok, #?METADATA{
-                                    key =  <<"">>,
-                                    addr_id    = 0,
-                                    ksize      = 4,
-                                    dsize      = 4,
-                                    meta       = CMetaBin,
-                                    msize      = byte_size(CMetaBin),
-                                    csize      = 0,
-                                    cnumber    = 0,
-                                    cindex     = 0,
-                                    offset     = 1,
-                                    clock      = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
-                                    timestamp  = 19740926,
-                                    checksum   = 0,
-                                    ring_hash  = 0,
-                                    cluster_id = [],
-                                    ver = 0,
-                                    del = ?DEL_FALSE
-                                   },
+                                           key =  <<"">>,
+                                           addr_id    = 0,
+                                           ksize      = 4,
+                                           dsize      = 4,
+                                           meta       = CMetaBin,
+                                           msize      = byte_size(CMetaBin),
+                                           csize      = 0,
+                                           cnumber    = 0,
+                                           cindex     = 0,
+                                           offset     = 1,
+                                           clock      = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
+                                           timestamp  = 19740926,
+                                           checksum   = 0,
+                                           ring_hash  = 0,
+                                           cluster_id = [],
+                                           ver = 0,
+                                           del = ?DEL_FALSE
+                                          },
                             <<"body">>}]),
 
             try
@@ -696,8 +698,7 @@ get_object_cmeta_normal1_([_TermFun, _Node0, Node1]) ->
                 {ok, {{_, SC, _}, Headers, Body}} =
                     httpc:request(get, {lists:append(["http://",
                                                       ?TARGET_HOST,
-                                                      ":12345/a/b.png"]),
-                                        [{"Date", Date}, {"connection", "close"}]}, [], []),
+                                                      ":12345/a/b.png"]), [{"Date", Date}, {"connection", "close"}]}, [], []),
                 ?assertEqual(200, SC),
                 ?assertEqual("body", Body),
                 ?assertEqual(undefined, proplists:get_value("X-From-Cache", Headers)),
@@ -713,6 +714,7 @@ get_object_cmeta_normal1_([_TermFun, _Node0, Node1]) ->
 
 get_object_acl_normal1_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- get_object_acl_normal1"]),
             meck:expect(leo_s3_bucket, get_acls, 1,
                         {ok, [#bucket_acl_info{user_id = ?GRANTEE_ALL_USER,
                                                permissions = [read, write]}]}),
@@ -731,24 +733,24 @@ get_object_acl_normal1_([_TermFun, _Node0, Node1]) ->
             ok = rpc:call(Node1, meck, expect,
                           [leo_storage_handler_object, head, 1,
                            {ok, #?METADATA{
-                                    key =  <<"bucket/object">>,
-                                    addr_id    = 0,
-                                    ksize      = 4,
-                                    dsize      = 16384,
-                                    meta       = <<>>,
-                                    msize      = 0,
-                                    csize      = 0,
-                                    cnumber    = 0,
-                                    cindex     = 0,
-                                    offset     = 1,
-                                    clock      = 63511805822,
-                                    timestamp  = 19740926,
-                                    checksum   = 0,
-                                    ring_hash  = 0,
-                                    cluster_id = [],
-                                    ver = 0,
-                                    del = ?DEL_FALSE
-                                   }
+                                           key =  <<"bucket/object">>,
+                                           addr_id    = 0,
+                                           ksize      = 4,
+                                           dsize      = 16384,
+                                           meta       = <<>>,
+                                           msize      = 0,
+                                           csize      = 0,
+                                           cnumber    = 0,
+                                           cindex     = 0,
+                                           offset     = 1,
+                                           clock      = 63511805822,
+                                           timestamp  = 19740926,
+                                           checksum   = 0,
+                                           ring_hash  = 0,
+                                           cluster_id = [],
+                                           ver = 0,
+                                           del = ?DEL_FALSE
+                                          }
                            }]),
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
@@ -756,7 +758,8 @@ get_object_acl_normal1_([_TermFun, _Node0, Node1]) ->
                     httpc:request(get, {lists:append(["http://",
                                                       ?TARGET_HOST,
                                                       ":12345/bucket/object?acl"]),
-                                        [{"Date", Date}, {"Authorization","AWS auth:hoge"}]},
+                                        [{"Date", Date},
+                                         {"Authorization","AWS auth:hoge"}]},
                                   [], [{full_result, false}]),
                 ?assertEqual(200, SC),
                 {_XmlDoc, Rest} = xmerl_scan:string(Body),
@@ -780,51 +783,52 @@ range_object_normal3_([_TermFun, _Node0, Node1]) ->
 
 range_object_base([_TermFun, _Node0, Node1], RangeValue) ->
     fun() ->
+            io:format(user, "~s~n",["- range_object_base"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
                           [leo_storage_handler_object, head, 1,
                            {ok, #?METADATA{
-                                    key =  <<"a/b.png">>,
-                                    addr_id    = 0,
-                                    ksize      = 4,
-                                    dsize      = 16384,
-                                    meta       = <<>>,
-                                    msize      = 0,
-                                    csize      = 0,
-                                    cnumber    = 0,
-                                    cindex     = 0,
-                                    offset     = 1,
-                                    clock      = 63505750315,
-                                    timestamp  = 19740926,
-                                    checksum   = 0,
-                                    ring_hash  = 0,
-                                    cluster_id = [],
-                                    ver = 0,
-                                    del = ?DEL_FALSE
-                                   }
+                                           key =  <<"a/b.png">>,
+                                           addr_id    = 0,
+                                           ksize      = 4,
+                                           dsize      = 16384,
+                                           meta       = <<>>,
+                                           msize      = 0,
+                                           csize      = 0,
+                                           cnumber    = 0,
+                                           cindex     = 0,
+                                           offset     = 1,
+                                           clock      = 63505750315,
+                                           timestamp  = 19740926,
+                                           checksum   = 0,
+                                           ring_hash  = 0,
+                                           cluster_id = [],
+                                           ver = 0,
+                                           del = ?DEL_FALSE
+                                          }
                            }]),
             ok = rpc:call(Node1, meck, expect,
                           [leo_storage_handler_object, get, 1,
                            {ok, #?METADATA{
-                                    key =  <<"">>,
-                                    addr_id    = 0,
-                                    ksize      = 2,
-                                    dsize      = 2,
-                                    meta       = <<>>,
-                                    msize      = 0,
-                                    csize      = 0,
-                                    cnumber    = 0,
-                                    cindex     = 0,
-                                    offset     = 1,
-                                    clock      = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
-                                    timestamp  = 19740926,
-                                    checksum   = 0,
-                                    ring_hash  = 0,
-                                    cluster_id = [],
-                                    ver = 0,
-                                    del = ?DEL_FALSE
-                                   },
+                                           key =  <<"">>,
+                                           addr_id    = 0,
+                                           ksize      = 2,
+                                           dsize      = 2,
+                                           meta       = <<>>,
+                                           msize      = 0,
+                                           csize      = 0,
+                                           cnumber    = 0,
+                                           cindex     = 0,
+                                           offset     = 1,
+                                           clock      = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
+                                           timestamp  = 19740926,
+                                           checksum   = 0,
+                                           ring_hash  = 0,
+                                           cluster_id = [],
+                                           ver = 0,
+                                           del = ?DEL_FALSE
+                                          },
                             <<"od">>}]),
 
             try
@@ -834,7 +838,9 @@ range_object_base([_TermFun, _Node0, Node1], RangeValue) ->
                                   {lists:append(["http://",
                                                  ?TARGET_HOST,
                                                  ":12345/a/b.png"]),
-                                   [{"Date", Date},{"connection", "close"},{"range", RangeValue}]}, [], []),
+                                   [{"Date", Date},
+                                    {"connection", "close"},
+                                    {"range", RangeValue}]}, [], []),
                 ?assertEqual(206, SC),
                 ?assertEqual("od", Body)
             catch
@@ -848,6 +854,7 @@ range_object_base([_TermFun, _Node0, Node1], RangeValue) ->
 
 delete_object_notfound_([_TermFun, Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- delete_object_notfound"]),
             ok = rpc:call(Node0, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node0, meck, expect,
@@ -856,8 +863,6 @@ delete_object_notfound_([_TermFun, Node0, Node1]) ->
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
                           [leo_storage_handler_object, delete, 1, {error, not_found}]),
-
-
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 {ok, {SC, _Body}} =
@@ -865,7 +870,8 @@ delete_object_notfound_([_TermFun, Node0, Node1]) ->
                                   {lists:append(["http://",
                                                  ?TARGET_HOST,
                                                  ":12345/a/b.png"]),
-                                   [{"Date", Date}, {"Authorization","auth"}]}, [], [{full_result, false}]),
+                                   [{"Date", Date},
+                                    {"Authorization","auth"}]}, [], [{full_result, false}]),
                 ?assertEqual(204, SC)
             catch
                 throw:Reason ->
@@ -879,6 +885,7 @@ delete_object_notfound_([_TermFun, Node0, Node1]) ->
 
 delete_object_error_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- delete_object_error"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
@@ -891,7 +898,10 @@ delete_object_error_([_TermFun, _Node0, Node1]) ->
                     httpc:request(delete, {lists:append(["http://",
                                                          ?TARGET_HOST,
                                                          ":12345/a/b.png"]),
-                                           [{"Date", Date}, {"Authorization","auth"}]}, [], [{full_result, false}]),
+                                           [{"Date", Date},
+                                            {"Authorization","auth"}]},
+                                  [],
+                                  [{full_result, false}]),
 
                 %% req id is empty for now
                 Xml = io_lib:format(?XML_ERROR,
@@ -911,6 +921,7 @@ delete_object_error_([_TermFun, _Node0, Node1]) ->
 
 delete_object_normal1_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- delete_object_normal1"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
@@ -922,7 +933,9 @@ delete_object_normal1_([_TermFun, _Node0, Node1]) ->
                     httpc:request(delete, {lists:append(["http://",
                                                          ?TARGET_HOST,
                                                          ":12345/a/b.png"]),
-                                           [{"Date", Date}, {"Authorization","auth"}]}, [], [{full_result, false}]),
+                                           [{"Date", Date},
+                                            {"Authorization","auth"}]},
+                                  [], [{full_result, false}]),
                 ?assertEqual(204, SC)
             catch
                 throw:Reason ->
@@ -937,6 +950,7 @@ delete_object_normal1_([_TermFun, _Node0, Node1]) ->
 -define(EUNIT_DEBUG_VAL_DEPTH, 1024).
 put_object_error_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- put_object_error"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
@@ -948,7 +962,8 @@ put_object_error_([_TermFun, _Node0, Node1]) ->
                     httpc:request(put, {lists:append(["http://",
                                                       ?TARGET_HOST,
                                                       ":12345/a/b.png"]),
-                                        [{"Date", Date}, {"Authorization","auth"}], "image/png", "body"},
+                                        [{"Date", Date},
+                                         {"Authorization","auth"}], "image/png", "body"},
                                   [], [{full_result, false}]),
                 %% req id is empty for now
                 Xml = io_lib:format(?XML_ERROR,
@@ -968,15 +983,17 @@ put_object_error_([_TermFun, _Node0, Node1]) ->
 
 put_object_error_metadata_too_large_([_TermFun, _Node0, _Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- put_object_error_metadata_too_large"]),
             try
                 Date = leo_http:rfc1123_date(leo_date:now()),
                 Dummy = lists:flatten(["test" || _ <- lists:seq(1, ?HTTP_METADATA_LIMIT * 2 div 4)]),
-                %Dummy = crypto:rand_bytes(?HTTP_METADATA_LIMIT * 2),
+                                                %Dummy = crypto:rand_bytes(?HTTP_METADATA_LIMIT * 2),
                 {ok, {SC, Body}} =
                     httpc:request(put, {lists:append(["http://",
                                                       ?TARGET_HOST,
                                                       ":12345/a/b.png"]),
-                                        [{"Date", Date}, {"Authorization","auth"},
+                                        [{"Date", Date},
+                                         {"Authorization","auth"},
                                          {"x-amz-meta-test", Dummy}], "image/png", "body"},
                                   [], [{full_result, false}]),
                 %% req id is empty for now
@@ -995,6 +1012,7 @@ put_object_error_metadata_too_large_([_TermFun, _Node0, _Node1]) ->
 
 put_object_normal1_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- put_object_normal1"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
@@ -1006,7 +1024,8 @@ put_object_normal1_([_TermFun, _Node0, Node1]) ->
                     httpc:request(put, {lists:append(["http://",
                                                       ?TARGET_HOST,
                                                       ":12345/a/b.png"]),
-                                        [{"Date", Date}, {"Authorization","auth"}], "image/png", "body"},
+                                        [{"Date", Date},
+                                         {"Authorization","auth"}], "image/png", "body"},
                                   [], [{full_result, false}]),
                 ?assertEqual(200, SC)
             catch
@@ -1051,6 +1070,7 @@ compute_chunk(PrevSign, SignHead, SignKey, Bin) ->
 
 put_object_aws_chunked_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- put_object_aws_chunked"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
@@ -1069,8 +1089,7 @@ put_object_aws_chunked_([_TermFun, _Node0, Node1]) ->
                                                       ?TARGET_HOST,
                                                       ":12345/testjv4/testFile.large.one"]),
                                         [{"Date", Date},
-                                         {"authorization",
-                                          "AWS4-HMAC-SHA256 Credential=05236/20150706/us-east-1/s3/aws4_request, SignedHeaders=content-length, Signature=642797dcfdf817ac23b553420f52c160847d3747b2e86e5ac9d07cc5e7f60f63"},
+                                         {"authorization","AWS4-HMAC-SHA256 Credential=05236/20150706/us-east-1/s3/aws4_request, SignedHeaders=content-length, Signature=642797dcfdf817ac23b553420f52c160847d3747b2e86e5ac9d07cc5e7f60f63"},
                                          {"x-amz-content-sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"},
                                          {"x-amz-decoded-content-length", integer_to_list(?AWSCHUNKEDSIZE)}
                                         ], "image/png", Chunks},
@@ -1088,6 +1107,7 @@ put_object_aws_chunked_([_TermFun, _Node0, Node1]) ->
 
 put_object_aws_chunked_error_([_TermFun, _Node0, Node1]) ->
     fun() ->
+            io:format(user, "~s~n",["- put_object_aws_chunked_error"]),
             ok = rpc:call(Node1, meck, new,
                           [leo_storage_handler_object, [no_link, non_strict]]),
             ok = rpc:call(Node1, meck, expect,
@@ -1109,8 +1129,7 @@ put_object_aws_chunked_error_([_TermFun, _Node0, Node1]) ->
                                                       ?TARGET_HOST,
                                                       ":12345/testjv4/testFile.large.one"]),
                                         [{"Date", Date},
-                                         {"authorization",
-                                          "AWS4-HMAC-SHA256 Credential=05236/20150706/us-east-1/s3/aws4_request, SignedHeaders=content-length, Signature=642797dcfdf817ac23b553420f52c160847d3747b2e86e5ac9d07cc5e7f60f63"},
+                                         {"authorization","AWS4-HMAC-SHA256 Credential=05236/20150706/us-east-1/s3/aws4_request, SignedHeaders=content-length, Signature=642797dcfdf817ac23b553420f52c160847d3747b2e86e5ac9d07cc5e7f60f63"},
                                          {"x-amz-content-sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"},
                                          {"x-amz-decoded-content-length", integer_to_list(?AWSCHUNKEDSIZE)}
                                         ], "image/png", Chunks},

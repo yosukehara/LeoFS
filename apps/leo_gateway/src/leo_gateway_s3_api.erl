@@ -103,7 +103,7 @@ handle(Req, State) ->
                             {BucketName, Path} = get_bucket_and_path(Req),
                             case Path of
                                 ?HTTP_SPECIAL_URL_HEALTH_CHECK ->
-                                                % /leofs_adm/ping is a special URL for health check
+                                    %% /leofs_adm/ping is a special URL for health check
                                     {ok, Req2} = case leo_gateway_http_commons:do_health_check() of
                                                      true ->
                                                          ?reply_ok([?SERVER_HEADER], <<"OK">>, Req);
@@ -111,7 +111,7 @@ handle(Req, State) ->
                                                          ?reply_internal_error_without_body([?SERVER_HEADER], Req)
                                                  end,
                                     {ok, Req2, State};
-                                _ ->
+                                _ ->                                    
                                     handle_1(Req, State, BucketName, Path)
                             end;
                         {error, Req2} ->
@@ -276,6 +276,7 @@ get_bucket(Req, BucketName, #req_params{access_key_id = _AccessKeyId,
                                         is_acl = true,
                                         begin_time = BeginTime}) ->
     BucketName_2 = formalize_bucket(BucketName),
+
     case leo_s3_bucket:find_bucket_by_name(BucketName_2) of
         {ok, BucketInfo} ->
             ?access_log_bucket_getacl(BucketName, ?HTTP_ST_OK, BeginTime),
@@ -982,8 +983,8 @@ handle_2({ok, AccessKeyId}, Req, ?HTTP_POST,  Path, Params, State) ->
 %% @TODO - 2018-05-16 (Object Encryption)
 handle_2({ok, AccessKeyId}, Req, HTTPMethod, Path, Params, State) ->
     case catch leo_gateway_http_req_handler:handle(
-                 HTTPMethod, Req,
-                 Path, Params#req_params{access_key_id = AccessKeyId}) of
+                 HTTPMethod, Req, Path,
+                 Params#req_params{access_key_id = AccessKeyId}) of
         {'EXIT', {"aws-chunked decode failed", _} = Cause} ->
             ?error("handle_2/6", [{key, binary_to_list(Path)},
                                   {cause, Cause}]),
@@ -1462,11 +1463,10 @@ auth(Req, HTTPMethod, Path, TokenLen, ReqParams) ->
                      false ->
                          ?BIN_EMPTY
                  end,
-
     case leo_s3_bucket:get_latest_bucket(BucketName) of
-        {ok, #?BUCKET{acls = ACLs} = BucketName} ->
+        {ok, #?BUCKET{acls = ACLs} = Bucket} ->
             auth(Req, HTTPMethod, Path, TokenLen,
-                 BucketName, ACLs, ReqParams#req_params{bucket_info = BucketName});
+                 BucketName, ACLs, ReqParams#req_params{bucket_info = Bucket});
         not_found ->
             auth(Req, HTTPMethod, Path, TokenLen, BucketName, [], ReqParams);
         {error, Cause} ->

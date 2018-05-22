@@ -196,7 +196,6 @@ invoke([#redundant_node{node = Node,
                         available = true}|T], Mod, Method, ReqParams, Errors) ->
     %% #request{method = Method} = ReqParams,
     Timeout = timeout(Method, [ReqParams]),
-
     case rpc:call(Node, Mod, Method, [ReqParams], Timeout) of
         %% is_dir
         Ret when is_boolean(Ret) ->
@@ -239,7 +238,7 @@ invoke([#redundant_node{node = Node,
                 Meta_1 ->
                     {ok, Meta_1}
             end;
-        {badrpc, _Cause} = Error ->
+        {badrpc,_Cause} = Error ->
             E = handle_error(Node, Mod, Method, ReqParams, Error),
             invoke(T, Mod, Method, ReqParams, [E|Errors]);
         Error ->
