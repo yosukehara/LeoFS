@@ -111,7 +111,7 @@ handle(Req, State) ->
                                                          ?reply_internal_error_without_body([?SERVER_HEADER], Req)
                                                  end,
                                     {ok, Req2, State};
-                                _ ->                                    
+                                _ ->
                                     handle_1(Req, State, BucketName, Path)
                             end;
                         {error, Req2} ->
