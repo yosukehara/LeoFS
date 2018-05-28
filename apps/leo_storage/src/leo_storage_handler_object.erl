@@ -89,29 +89,25 @@ get(#request{addr_id = AddrId,
 %% @deplicated
 get({Ref, Key}) ->
     ?debug("get/1", [{from, storage}, {method, get}, {key, Key}]),
-    ok = leo_metrics_req:notify(?STAT_COUNT_GET),
     BeginTime = leo_date:clock(),
+    ok = leo_metrics_req:notify(?STAT_COUNT_GET),
+
     case leo_redundant_manager_api:get_redundancies_by_key(get, Key) of
         {ok, #redundancies{id = AddrId}} ->
-            IsForcedCheck = true,
-
-            %% @TODO
-            case get_fun(AddrId, Key, IsForcedCheck) of
+            case get_fun(AddrId, Key, true) of
                 {ok, Metadata, #?OBJECT{data = Bin}} ->
                     ?access_log_storage_get(Key, byte_size(Bin), BeginTime, ok),
                     {ok, Ref, Metadata, Bin};
                 {error, Cause} ->
                     ?access_log_storage_get(?ACC_LOG_L_ERROR, Key, 0, BeginTime, error),
-                    ?error("get/1", [{from, storage}, {method, get},
-                                     {key, Key}, {cause, Cause}]),
                     {error, Ref, Cause}
             end;
         _ ->
-            Cause = ?ERROR_COULD_NOT_GET_REDUNDANCY,
-            ?access_log_storage_get(?ACC_LOG_L_ERROR, Key, 0, BeginTime, {error, Cause}),
+            ?access_log_storage_get(?ACC_LOG_L_ERROR, Key, 0, BeginTime,
+                                    {error, ?ERROR_COULD_NOT_GET_REDUNDANCY}),
             ?error("get/1", [{from, storage}, {method, get},
-                             {key, Key}, {cause, Cause}]),
-            {error, Ref, Cause}
+                             {key, Key}, {cause, ?ERROR_COULD_NOT_GET_REDUNDANCY}]),
+            {error, Ref, ?ERROR_COULD_NOT_GET_REDUNDANCY}
     end.
 
 %% @doc get object (from storage-node#2).
@@ -260,6 +256,7 @@ get_cmeta(#?METADATA{key = Key,
             {ok, Metadata#?METADATA{meta = <<>>}}
     end.
 
+
 %% @doc read data (common).
 %% @private
 -spec(get_fun(AddrId, Key, IsForcedCheck) ->
@@ -312,6 +309,8 @@ get_fun(AddrId, Key, StartPos, EndPos, IsForcedCheck) ->
                     {error, unavailable};
                 {error, Cause} ->
                     ok = leo_storage_watchdog_error:push(Cause),
+                    ?error("get/4", [{from, storage}, {method, get},
+                                     {key, Key}, {cause, Cause}]),
                     {error, Cause}
             end;
         {ok, ErrorItems} ->
@@ -1293,8 +1292,8 @@ read_and_repair_2(#read_parameter{addr_id = AddrId,
                                   end_pos = EndPos} = ReadParameter,
                   #redundant_node{node = Node}, Redundancies) when Node == erlang:node() ->
     LeftRedundancies = [RedundantNode ||
-                           #redundant_node{node = RNode} = RedundantNode <- Redundancies, RNode =/= Node],
-    %% @TODO
+                           #redundant_node{node = RNode} = RedundantNode
+                               <- Redundancies, RNode =/= Node],
     read_and_repair_3(
       get_fun(AddrId, Key, StartPos, EndPos), ReadParameter, LeftRedundancies);
 
@@ -1331,8 +1330,8 @@ read_and_repair_2(#read_parameter{addr_id = AddrId,
             Reply;
         _ ->
             LeftRedundancies = [RedundantNode ||
-                                   #redundant_node{node = RNode} = RedundantNode <- Redundancies, RNode =/= Node],
-            %% @TODO
+                                   #redundant_node{node = RNode} = RedundantNode
+                                       <- Redundancies, RNode =/= Node],
             read_and_repair_3(
               get_fun(AddrId, Key, StartPos, EndPos), ReadParameter, LeftRedundancies)
     end;
@@ -1554,9 +1553,9 @@ get_cmeta_test() ->
 debug_put(Key, Body, NumOfReplicas) ->
     case leo_redundant_manager_api:get_redundancies_by_key(put, Key) of
         {ok, #redundancies{nodes = Redundancies,
-                              id = AddrId,
-                               n = NumOfReplicasOrg,
-                               ring_hash = RingHash}} ->
+                           id = AddrId,
+                           n = NumOfReplicasOrg,
+                           ring_hash = RingHash}} ->
             NumOfReplicas2 = case NumOfReplicas > NumOfReplicasOrg of
                                  true ->
                                      NumOfReplicasOrg;
@@ -1566,17 +1565,17 @@ debug_put(Key, Body, NumOfReplicas) ->
             Redundancies2 = lists:sublist(Redundancies, NumOfReplicas2),
             Quorum = ?quorum(?CMD_PUT, NumOfReplicas2, NumOfReplicas2),
             Object = #?OBJECT{method = ?CMD_PUT,
-                             addr_id = AddrId,
-                             key = Key,
-                             data = Body,
-                             dsize = size(Body),
-                             timestamp = leo_date:now(),
-                             clock = leo_date:clock(),
-                             ring_hash = RingHash},
+                              addr_id = AddrId,
+                              key = Key,
+                              data = Body,
+                              dsize = size(Body),
+                              timestamp = leo_date:now(),
+                              clock = leo_date:clock(),
+                              ring_hash = RingHash},
             leo_storage_replicator:replicate(
-                ?CMD_PUT, Quorum, Redundancies2,
-                Object,
-                replicate_callback(Object));
+              ?CMD_PUT, Quorum, Redundancies2,
+              Object,
+              replicate_callback(Object));
         {error, Cause} ->
             {error, Cause}
     end.
@@ -1585,9 +1584,9 @@ debug_put(Key, Body, NumOfReplicas) ->
 debug_delete(Key, NumOfReplicas) ->
     case leo_redundant_manager_api:get_redundancies_by_key(delete, Key) of
         {ok, #redundancies{nodes = Redundancies,
-                              id = AddrId,
-                               n = NumOfReplicasOrg,
-                               ring_hash = RingHash}} ->
+                           id = AddrId,
+                           n = NumOfReplicasOrg,
+                           ring_hash = RingHash}} ->
             NumOfReplicas2 = case NumOfReplicas > NumOfReplicasOrg of
                                  true ->
                                      NumOfReplicasOrg;
@@ -1597,18 +1596,18 @@ debug_delete(Key, NumOfReplicas) ->
             Redundancies2 = lists:sublist(Redundancies, NumOfReplicas2),
             Quorum = ?quorum(?CMD_DELETE, NumOfReplicas2, NumOfReplicas2),
             Object = #?OBJECT{method = ?CMD_DELETE,
-                             addr_id = AddrId,
-                             key = Key,
-                             data = <<>>,
-                             dsize = 0,
-                             timestamp = leo_date:now(),
-                             clock = leo_date:clock(),
-                             ring_hash = RingHash,
-                             del = ?DEL_TRUE},
+                              addr_id = AddrId,
+                              key = Key,
+                              data = <<>>,
+                              dsize = 0,
+                              timestamp = leo_date:now(),
+                              clock = leo_date:clock(),
+                              ring_hash = RingHash,
+                              del = ?DEL_TRUE},
             leo_storage_replicator:replicate(
-                ?CMD_DELETE, Quorum, Redundancies2,
-                Object,
-                replicate_callback(Object));
+              ?CMD_DELETE, Quorum, Redundancies2,
+              Object,
+              replicate_callback(Object));
         {error, Cause} ->
             {error, Cause}
     end.
