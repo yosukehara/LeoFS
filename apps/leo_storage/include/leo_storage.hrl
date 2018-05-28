@@ -122,8 +122,8 @@
           addr_id = 0 :: non_neg_integer(),
           key = <<>> :: binary(),
           etag = 0 :: non_neg_integer(),
-          start_pos = -1 :: integer(),
-          end_pos   = -1 :: integer(),
+          start_pos = 0 :: integer(),
+          end_pos = 0 :: integer(),
           quorum = 0 :: non_neg_integer(),
           req_id = 0 :: non_neg_integer()
          }).

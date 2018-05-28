@@ -74,6 +74,19 @@
                                       Metadata::#?METADATA{},
                                       Bin::binary(),
                                       Cause::any()).
+%% @since v2.0.0 - request from leo_gateway
+get(#request{addr_id = AddrId,
+             key = Key,
+             start_pos = StartPos,
+             end_pos = EndPos,
+             req_id = ReqId}) ->
+    get(#read_parameter{ref = make_ref(),
+                        addr_id = AddrId,
+                        key = Key,
+                        start_pos = StartPos,
+                        end_pos = EndPos,
+                        req_id = ReqId}, []);
+%% @deplicated
 get({Ref, Key}) ->
     ?debug("get/1", [{from, storage}, {method, get}, {key, Key}]),
     ok = leo_metrics_req:notify(?STAT_COUNT_GET),
@@ -81,6 +94,8 @@ get({Ref, Key}) ->
     case leo_redundant_manager_api:get_redundancies_by_key(get, Key) of
         {ok, #redundancies{id = AddrId}} ->
             IsForcedCheck = true,
+
+            %% @TODO
             case get_fun(AddrId, Key, IsForcedCheck) of
                 {ok, Metadata, #?OBJECT{data = Bin}} ->
                     ?access_log_storage_get(Key, byte_size(Bin), BeginTime, ok),
@@ -105,15 +120,41 @@ get({Ref, Key}) ->
              {ok, match} |
              {error, any()} when ReadParams::#read_parameter{},
                                  Redundancies::[#redundant_node{}]).
-get(ReadParameter, Redundancies) when Redundancies /= [] ->
+get(#read_parameter{key = Key,
+                    start_pos = StartPos,
+                    end_pos = EndPos,
+                    req_id = ReqId} = ReadParameter, Redundancies) when Redundancies /= [] ->
+    BeginTime = leo_date:clock(),
     ok = leo_metrics_req:notify(?STAT_COUNT_GET),
-    case read_and_repair(ReadParameter, Redundancies) of
-        {ok, #?METADATA{meta = CMeta} = Meta, Bin} when CMeta =/= <<>> ->
-            {ok, NewMeta} = get_cmeta(Meta),
 
-            {ok, NewMeta, Bin};
-        Other ->
-            Other
+    case read_and_repair(ReadParameter, Redundancies) of
+        {ok, #?METADATA{meta = CMeta} = Meta, Bin} ->
+            Meta_1 = case (CMeta =/= <<>>) of
+                         true ->
+                             {ok, NewMeta}= get_cmeta(Meta),
+                             NewMeta;
+                         false ->
+                             Meta
+                     end,
+            case (StartPos /= 0 orelse EndPos /= 0) of
+                true ->
+                    ?access_log_range_get(Key, StartPos, EndPos, byte_size(Bin), ReqId, BeginTime, ok);
+                false ->
+                    ?access_log_get(Key, byte_size(Bin), ReqId, BeginTime, ok)
+            end,
+            {ok, Meta_1, Bin};
+        {ok, match} ->
+            ?access_log_get(Key, 0, ReqId, BeginTime, match),
+            {ok, match};
+        {error, not_found = Reply} ->
+            ?access_log_get(?ACC_LOG_L_ERROR, Key, 0, ReqId, BeginTime, Reply),
+            {error, Reply};
+        {error, Cause} ->
+            ?access_log_get(?ACC_LOG_L_ERROR, Key, 0, ReqId, BeginTime, error),
+            ?error("get/2", [{from, gateway}, {method, get},
+                             {key, Key}, {req_id, ReqId},
+                             {start_pos, StartPos}, {end_pos, EndPos}, {cause, Cause}]),
+            {error, Cause}
     end;
 
 get(#read_parameter{addr_id = AddrId} = ReadParameter,_Redundancies) ->
@@ -134,6 +175,7 @@ get(#read_parameter{addr_id = AddrId} = ReadParameter,_Redundancies) ->
     end.
 
 %% @doc Retrieve an object which is requested from gateway.
+%% @deplicated
 -spec(get(AddrId, Key, ReqId) ->
              {ok, Metadata, Bin} |
              {error, any()} when AddrId::integer(),
@@ -142,25 +184,14 @@ get(#read_parameter{addr_id = AddrId} = ReadParameter,_Redundancies) ->
                                  Metadata::#?METADATA{},
                                  Bin::binary()).
 get(AddrId, Key, ReqId) ->
-    BeginTime = leo_date:clock(),
     ?debug("get/3", [{from, gateway}, {method, get}, {key, Key}, {req_id, ReqId}]),
-    Ret = get(#read_parameter{ref = make_ref(),
-                              addr_id = AddrId,
-                              key = Key,
-                              req_id = ReqId}, []),
-    case Ret of
-        {ok, _, Bin} ->
-            ?access_log_get(Key, byte_size(Bin), ReqId, BeginTime, ok);
-        {error, Reply = not_found} ->
-            ?access_log_get(?ACC_LOG_L_ERROR, Key, 0, ReqId, BeginTime, Reply);
-        {error, Cause} ->
-            ?access_log_get(?ACC_LOG_L_ERROR, Key, 0, ReqId, BeginTime, error),
-            ?error("get/3", [{from, gateway}, {method, get},
-                             {key, Key}, {req_id, ReqId}, {cause, Cause}])
-    end,
-    Ret.
+    get(#read_parameter{ref = make_ref(),
+                        addr_id = AddrId,
+                        key = Key,
+                        req_id = ReqId}, []).
 
 %% @doc Retrieve an object which is requested from gateway w/etag.
+%% @deplicated
 -spec(get(AddrId, Key, ETag, ReqId) ->
              {ok, Metadata, Bin} |
              {ok, match} |
@@ -171,28 +202,15 @@ get(AddrId, Key, ReqId) ->
                                  Metadata::#?METADATA{},
                                  Bin::binary()).
 get(AddrId, Key, ETag, ReqId) ->
-    BeginTime = leo_date:clock(),
     ?debug("get/4", [{from, gateway}, {method, get}, {key, Key}, {req_id, ReqId}, {etag, ETag}]),
-    Ret = get(#read_parameter{ref = make_ref(),
-                              addr_id = AddrId,
-                              key = Key,
-                              etag = ETag,
-                              req_id = ReqId}, []),
-    case Ret of
-        {ok, match} ->
-            ?access_log_get(Key, 0, ReqId, BeginTime, match);
-        {ok, _, Bin} ->
-            ?access_log_get(Key, byte_size(Bin), ReqId, BeginTime, ok);
-        {error, Reply = not_found} ->
-            ?access_log_get(?ACC_LOG_L_ERROR, Key, 0, ReqId, BeginTime, Reply);
-        {error, Cause} ->
-            ?access_log_get(?ACC_LOG_L_ERROR, Key, 0, ReqId, BeginTime, error),
-            ?error("get/4", [{from, gateway}, {method, get},
-                             {key, Key}, {req_id, ReqId}, {etag, ETag}, {cause, Cause}])
-    end,
-    Ret.
+    get(#read_parameter{ref = make_ref(),
+                        addr_id = AddrId,
+                        key = Key,
+                        etag = ETag,
+                        req_id = ReqId}, []).
 
 %% @doc Retrieve a part of an object.
+%% @deplicated
 -spec(get(AddrId, Key, StartPos, EndPos, ReqId) ->
              {ok, Metadata, Bin} |
              {error, any()} when AddrId::integer(),
@@ -203,34 +221,21 @@ get(AddrId, Key, ETag, ReqId) ->
                                  Metadata::#?METADATA{},
                                  Bin::binary()).
 get(AddrId, Key, StartPos, EndPos, ReqId) ->
-    BeginTime = leo_date:clock(),
     ?debug("get/5", [{from, gateway}, {method, get}, {key, Key}, {req_id, ReqId},
                      {start_pos, StartPos}, {end_pos, EndPos}]),
-    Ret = get(#read_parameter{ref = make_ref(),
-                              addr_id = AddrId,
-                              key = Key,
-                              start_pos = StartPos,
-                              end_pos = EndPos,
-                              req_id = ReqId}, []),
-    case Ret of
-        {ok, _, Bin} ->
-            ?access_log_range_get(Key, StartPos, EndPos, byte_size(Bin), ReqId, BeginTime, ok);
-        {error, Reply = not_found} ->
-            ?access_log_get(?ACC_LOG_L_ERROR, Key, 0, ReqId, BeginTime, Reply);
-        {error, Cause} ->
-            ?access_log_range_get(?ACC_LOG_L_ERROR, Key, StartPos, EndPos, 0, ReqId, BeginTime, error),
-            ?error("get/5", [{from, gateway}, {method, get},
-                             {key, Key}, {req_id, ReqId},
-                             {start_pos, StartPos}, {end_pos, EndPos}, {cause, Cause}])
-    end,
-    Ret.
+    get(#read_parameter{ref = make_ref(),
+                        addr_id = AddrId,
+                        key = Key,
+                        start_pos = StartPos,
+                        end_pos = EndPos,
+                        req_id = ReqId}, []).
+
 
 %% @doc retrieve UDM and set it back to the meta field
 %%      to fix https://github.com/leo-project/leofs/issues/641
 %% @private
 -spec(get_cmeta(Metadata) ->
-             {ok, Metadata} |
-             {error, any()} when Metadata::#?METADATA{}).
+             {ok, Metadata} when Metadata::#?METADATA{}).
 get_cmeta(#?METADATA{key = Key,
                      meta = CMeta} = Metadata) ->
     case leo_object_storage_transformer:get_udm_from_cmeta_bin(CMeta) of
@@ -1289,6 +1294,7 @@ read_and_repair_2(#read_parameter{addr_id = AddrId,
                   #redundant_node{node = Node}, Redundancies) when Node == erlang:node() ->
     LeftRedundancies = [RedundantNode ||
                            #redundant_node{node = RNode} = RedundantNode <- Redundancies, RNode =/= Node],
+    %% @TODO
     read_and_repair_3(
       get_fun(AddrId, Key, StartPos, EndPos), ReadParameter, LeftRedundancies);
 
@@ -1326,6 +1332,7 @@ read_and_repair_2(#read_parameter{addr_id = AddrId,
         _ ->
             LeftRedundancies = [RedundantNode ||
                                    #redundant_node{node = RNode} = RedundantNode <- Redundancies, RNode =/= Node],
+            %% @TODO
             read_and_repair_3(
               get_fun(AddrId, Key, StartPos, EndPos), ReadParameter, LeftRedundancies)
     end;
