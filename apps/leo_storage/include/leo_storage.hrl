@@ -48,6 +48,17 @@
                         ?CMD_HEAD
                         ).
 
+-define(request_verb(_Obj),
+        begin
+            #?OBJECT{del = _DelFlg} = _Obj,
+            case _DelFlg of
+                ?DEL_TRUE ->
+                    ?CMD_DELETE;
+                ?DEL_FALSE ->
+                    ?CMD_PUT
+            end
+        end).
+
 -type(etag_ret() :: {etag, non_neg_integer()}).
 
 

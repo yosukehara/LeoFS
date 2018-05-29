@@ -66,11 +66,11 @@
 %% API - GET
 %%--------------------------------------------------------------------
 %% @doc get object (from storage-node#1).
--spec(get(RefAndKey) ->
+-spec(get(Request) ->
              {ok, Ref, Metadata, Bin} |
-             {error, Ref, Cause} when Ref::reference(),
+             {error, Ref, Cause} when Request::{Ref, Key} | #request{},
+                                      Ref::reference(),
                                       Key::binary(),
-                                      RefAndKey::{Ref, Key},
                                       Metadata::#?METADATA{},
                                       Bin::binary(),
                                       Cause::any()).
@@ -88,7 +88,6 @@ get(#request{addr_id = AddrId,
                         req_id = ReqId}, []);
 %% @deplicated
 get({Ref, Key}) ->
-    ?debug("get/1", [{from, storage}, {method, get}, {key, Key}]),
     BeginTime = leo_date:clock(),
     ok = leo_metrics_req:notify(?STAT_COUNT_GET),
 
@@ -180,7 +179,6 @@ get(#read_parameter{addr_id = AddrId} = ReadParameter,_Redundancies) ->
                                  Metadata::#?METADATA{},
                                  Bin::binary()).
 get(AddrId, Key, ReqId) ->
-    ?debug("get/3", [{from, gateway}, {method, get}, {key, Key}, {req_id, ReqId}]),
     get(#read_parameter{ref = make_ref(),
                         addr_id = AddrId,
                         key = Key,
@@ -198,7 +196,6 @@ get(AddrId, Key, ReqId) ->
                                  Metadata::#?METADATA{},
                                  Bin::binary()).
 get(AddrId, Key, ETag, ReqId) ->
-    ?debug("get/4", [{from, gateway}, {method, get}, {key, Key}, {req_id, ReqId}, {etag, ETag}]),
     get(#read_parameter{ref = make_ref(),
                         addr_id = AddrId,
                         key = Key,
@@ -217,8 +214,6 @@ get(AddrId, Key, ETag, ReqId) ->
                                  Metadata::#?METADATA{},
                                  Bin::binary()).
 get(AddrId, Key, StartPos, EndPos, ReqId) ->
-    ?debug("get/5", [{from, gateway}, {method, get}, {key, Key}, {req_id, ReqId},
-                     {start_pos, StartPos}, {end_pos, EndPos}]),
     get(#read_parameter{ref = make_ref(),
                         addr_id = AddrId,
                         key = Key,
@@ -313,8 +308,8 @@ get_fun(AddrId, Key, StartPos, EndPos, IsForcedCheck) ->
                                      {key, Key}, {cause, Cause}]),
                     {error, Cause}
             end;
-        {ok, ErrorItems} ->
-            ?debug("get_fun/4", "error-items:~p", [ErrorItems]),
+        {ok,_ErrorItems} ->
+            %% @TODO
             {error, unavailable}
     end.
 
@@ -323,18 +318,22 @@ get_fun(AddrId, Key, StartPos, EndPos, IsForcedCheck) ->
 %% API - PUT
 %%--------------------------------------------------------------------
 %% @doc Insert an object (local replicate).
--spec(put(ObjAndRef) ->
-             {ok, Ref, EtagRet} |
-             {error, Ref, Cause} when Ref::reference(),
+-spec(put(Request) ->
+             {ok, Ref, ETagRet} |
+             {error, Ref, Cause} when Request:: {Ref, Object} | #request{},
+                                      Ref::reference(),
                                       Object::#?OBJECT{},
-                                      ObjAndRef::{Object, Ref},
-                                      EtagRet::etag_ret(),
+                                      ETagRet::etag_ret(),
                                       Cause::any()).
-put({Object, Ref}) ->
-    AddrId = Object#?OBJECT.addr_id,
-    Key    = Object#?OBJECT.key,
+%% @since v2.0.0 - request from leo_gateway
+put(#request{data = Object,
+             req_id = ReqId}) ->
+    put(Object, ReqId, gateway);
 
-    case Object#?OBJECT.del of
+put({#?OBJECT{addr_id = AddrId,
+              key = Key,
+              del = DelFlg} = Object, Ref}) ->
+    case DelFlg of
         ?DEL_TRUE->
             case leo_object_storage_api:head({AddrId, Key}) of
                 {ok, MetaBin} ->
@@ -357,7 +356,6 @@ put({Object, Ref}) ->
                     ok = leo_storage_watchdog_error:push(Cause),
                     {error, Ref, Cause}
             end;
-        %% FOR PUT
         ?DEL_FALSE ->
             put_fun(Ref, AddrId, Key, Object)
     end.
@@ -367,7 +365,7 @@ put({Object, Ref}) ->
 -spec(put(Object, ReqId) ->
              {ok, ETag} | {error, any()} when Object::#?OBJECT{},
                                               ReqId::integer(),
-                                              ETag::{etag, integer()}).
+                                              ETag::{etag, non_neg_integer()}).
 put(Object, ReqId) ->
     put(Object, ReqId, gateway).
 
@@ -375,24 +373,22 @@ put(Object, ReqId) ->
              {ok, ETag} | {error, any()} when Object::#?OBJECT{},
                                               ReqId::integer(),
                                               From::atom(),
-                                              ETag::{etag, integer()}).
+                                              ETag::{etag, non_neg_integer()}).
 put(Object, ReqId, From) ->
-    BeginTime = leo_date:clock(),
-    ?debug("put/2", [{from, From}, {method, put}, {key, Object#?OBJECT.key}, {req_id, ReqId}]),
-    ok = leo_metrics_req:notify(?STAT_COUNT_PUT),
-    Ret = replicate_fun(?REP_LOCAL, ?CMD_PUT, Object#?OBJECT.addr_id,
-                        Object#?OBJECT{method = ?CMD_PUT,
-                                       clock = leo_date:clock(),
-                                       req_id = ReqId}, gateway),
-    case Ret of
-        {ok, _} ->
-            ?access_log_put(Object#?OBJECT.key, Object#?OBJECT.dsize, ReqId, BeginTime, ok);
-        {error, Cause} ->
-            ?access_log_put(?ACC_LOG_L_ERROR, Object#?OBJECT.key, Object#?OBJECT.dsize, ReqId, BeginTime, error),
+    Method = ?request_verb(Object),
+
+    case replicate_fun(?REP_LOCAL, ?CMD_PUT,
+                       Object#?OBJECT{method = Method,
+                                      clock = leo_date:clock(),
+                                      req_id = ReqId}, gateway) of
+        {ok, ETag} ->
+            {ok, ETag};
+        {error, Cause} = Error ->
             ?error("put/2", [{from, From}, {method, put},
-                             {key, Object#?OBJECT.key}, {req_id, ReqId}, {cause, Cause}])
-    end,
-    Ret.
+                             {key, Object#?OBJECT.key}, {req_id, ReqId},
+                             {cause, Cause}]),
+            Error
+    end.
 
 %% @doc Insert an  object (request from remote-storage-nodes/replicator).
 -spec(put(Ref, From, Object, ReqId) ->
@@ -404,28 +400,15 @@ put(Object, ReqId, From) ->
                                  Etag::non_neg_integer(),
                                  Cause::any()).
 put(Ref, From, Object, ReqId) ->
-    BeginTime = leo_date:clock(),
-    Method = case Object#?OBJECT.del of
-                 ?DEL_TRUE ->
-                     ok = leo_metrics_req:notify(?STAT_COUNT_DEL),
-                     ?CMD_DELETE;
-                 ?DEL_FALSE ->
-                     ok = leo_metrics_req:notify(?STAT_COUNT_PUT),
-                     ?CMD_PUT
-             end,
+    Method = ?request_verb(Object),
     Key = Object#?OBJECT.key,
-    ?debug("put/4", [{from, storage}, {method, Method}, {key, Key}, {req_id, ReqId}]),
 
     case replicate_fun(?REP_REMOTE, Method, Object) of
         {ok, ETag} ->
-            ?access_log_storage_put(Method, Key, Object#?OBJECT.dsize, ReqId, BeginTime, ok),
             erlang:send(From, {Ref, {ok, ETag}});
-        %% not found an object (during rebalance and delete-operation)
-        {error, Cause = not_found} when ReqId == 0 ->
-            ?access_log_storage_put(?ACC_LOG_L_ERROR, Method, Key, 0, ReqId, BeginTime, Cause),
+        {error, not_found} when ReqId == 0 ->
             erlang:send(From, {Ref, {ok, 0}});
         {error, Cause} ->
-            ?access_log_storage_put(?ACC_LOG_L_ERROR, Method, Key, 0, ReqId, BeginTime, error),
             ?error("put/4", [{from, storage}, {method, Method},
                              {key, Key}, {req_id, ReqId}, {cause, Cause}]),
             erlang:send(From, {Ref, {error, {node(), Cause}}})
@@ -456,8 +439,8 @@ put_fun(Ref, AddrId, Key, #?OBJECT{del = ?DEL_TRUE} = Object) ->
                     ok = leo_storage_watchdog_error:push(Cause),
                     {error, Ref, Cause}
             end;
-        {ok, ErrorItems} ->
-            ?debug("put_fun/4", "error-items:~p", [ErrorItems]),
+        {ok,_ErrorItems} ->
+            %% @TODO
             {error, Ref, unavailable}
     end;
 put_fun(Ref, AddrId, Key, Object) ->
@@ -474,8 +457,8 @@ put_fun(Ref, AddrId, Key, Object) ->
                     ok = leo_storage_watchdog_error:push(Cause),
                     {error, Ref, Cause}
             end;
-        {ok, ErrorItems} ->
-            ?debug("put_fun/4", "error-items:~p", [ErrorItems]),
+        {ok,_ErrorItems} ->
+            %% @TODO
             {error, Ref, unavailable}
     end.
 
@@ -585,10 +568,8 @@ delete(Object, ReqId) ->
 delete(Object, ReqId, CheckUnderDir) ->
     BeginTime = leo_date:clock(),
     Key = Object#?OBJECT.key,
-    ?debug("delete/3", [{from, gateway}, {method, del}, {key, Key}, {req_id, ReqId}]),
-    ok = leo_metrics_req:notify(?STAT_COUNT_DEL),
+
     case replicate_fun(?REP_LOCAL, ?CMD_DELETE,
-                       Object#?OBJECT.addr_id,
                        Object#?OBJECT{method = ?CMD_DELETE,
                                       data = <<>>,
                                       dsize = 0,
@@ -615,10 +596,7 @@ delete(Object, ReqId, CheckUnderDir) ->
                                       CheckUnderDir::boolean(),
                                       From::atom()).
 delete(Object, ReqId, CheckUnderDir, From) ->
-    Key = Object#?OBJECT.key,
-    ?debug("delete/3", [{from, From}, {method, del}, {key, Key}, {req_id, ReqId}]),
     case replicate_fun(?REP_LOCAL, ?CMD_DELETE,
-                       Object#?OBJECT.addr_id,
                        Object#?OBJECT{method = ?CMD_DELETE,
                                       data = <<>>,
                                       dsize = 0,
@@ -630,8 +608,6 @@ delete(Object, ReqId, CheckUnderDir, From) ->
         {error, Cause = not_found} ->
             delete_1({error, Cause}, Object, CheckUnderDir);
         {error, Cause} ->
-            ?debug("delete/4", [{from, From}, {method, del},
-                                {key, Object#?OBJECT.key}, {req_id, ReqId}, {cause, Cause}]),
             {error, Cause}
     end.
 
@@ -779,16 +755,10 @@ head_with_calc_md5(AddrId, Key, MD5Context) ->
                                  Cause::any()).
 replicate(#?OBJECT{num_of_replicas = Preferred_N,
                    preferred_w = Preferred_W,
-                   preferred_d = Preferred_D,
-                   del = DelFlag} = Object) ->
+                   preferred_d = Preferred_D} = Object) ->
     %% Transform an object to a metadata
     Metadata = leo_object_storage_transformer:object_to_metadata(Object),
-    Method = case DelFlag of
-                 ?DEL_TRUE ->
-                     ?CMD_DELETE;
-                 ?DEL_FALSE ->
-                     ?CMD_PUT
-             end,
+    Method = ?request_verb(Object),
     AddrId = Metadata#?METADATA.addr_id,
 
     %% Retrieve redudancies
@@ -936,7 +906,6 @@ get_inconsistent_nodes(AddrId, Preferred_N, InconsistentNodes) ->
 %% API - Prefix Search (Fetch)
 %%--------------------------------------------------------------------
 prefix_search(ParentDir, Marker, MaxKeys) ->
-    ?debug("prefix_search/3", "Parent Dir: ~p, Marker: ~p", [ParentDir, Marker]),
     StartDateTime = leo_date:now(),
     Timeout = ?env_seeking_timeout_per_metadata() * MaxKeys,
 
@@ -1405,68 +1374,91 @@ read_and_repair_3(_,_,_) ->
 
 %% @doc Replicate an object from local-node to remote node
 %% @private
--spec(replicate_fun(ReplicationMethod, Method, AddrId, Object, From) ->
+-spec(replicate_fun(ReplicationMethod, Method, Object, From) ->
              {ok, ETag} |
              {error, Cause} when ReplicationMethod::replication(),
                                  Method::request_verb(),
-                                 AddrId::integer(),
                                  Object::#?OBJECT{},
                                  From::atom(),
                                  ETag::{etag, integer()},
                                  Cause::any()).
-replicate_fun(?REP_LOCAL, Method, AddrId, Object, From) ->
+replicate_fun(?REP_LOCAL, Method, #?OBJECT{addr_id = AddrId,
+                                           key = Key,
+                                           dsize = Size,
+                                           req_id = ReqId} = Object, From) ->
+    BeginTime = leo_date:clock(),
+
     %% Check state of the node
-    case leo_watchdog_state:find_not_safe_items(?WD_EXCLUDE_ITEMS) of
-        not_found ->
-            case leo_redundant_manager_api:get_redundancies_by_addr_id(put, AddrId) of
-                {ok, #redundancies{nodes = Redundancies,
-                                   n = NumOfReplicas,
-                                   w = WriteQuorum,
-                                   d = DeleteQuorum,
-                                   ring_hash = RingHash}} ->
-                    Quorum = case From of
-                                 leo_mq ->
-                                     ?quorum(Method, NumOfReplicas, NumOfReplicas);
-                                 _ ->
-                                     ?quorum(Method, WriteQuorum, DeleteQuorum)
-                             end,
-                    leo_storage_replicator:replicate(
-                      Method, Quorum, Redundancies,
-                      Object#?OBJECT{ring_hash = RingHash},
-                      replicate_callback(Object));
-                {error,_Cause} ->
-                    {error, ?ERROR_COULD_NOT_GET_REDUNDANCY}
-            end;
-        {ok, ErrorItems}->
-            ?debug("replicate_fun/4", "error-items:~p", [ErrorItems]),
-            {error, unavailable}
-    end.
+    Ret = case leo_watchdog_state:find_not_safe_items(?WD_EXCLUDE_ITEMS) of
+              not_found ->
+                  case leo_redundant_manager_api:get_redundancies_by_addr_id(put, AddrId) of
+                      {ok, #redundancies{nodes = Redundancies,
+                                         n = NumOfReplicas,
+                                         w = WriteQuorum,
+                                         d = DeleteQuorum,
+                                         ring_hash = RingHash}} ->
+                          Quorum = case From of
+                                       leo_mq ->
+                                           ?quorum(Method, NumOfReplicas, NumOfReplicas);
+                                       _ ->
+                                           ?quorum(Method, WriteQuorum, DeleteQuorum)
+                                   end,
+                          leo_storage_replicator:replicate(
+                            Method, Quorum, Redundancies,
+                            Object#?OBJECT{ring_hash = RingHash},
+                            replicate_callback(Object));
+                      {error,_Cause} ->
+                          {error, ?ERROR_COULD_NOT_GET_REDUNDANCY}
+                  end;
+              {ok,_ErrorItems}->
+                  %% @TODO
+                  {error, unavailable}
+          end,
+    replicate_fun_1(?REP_LOCAL, Ret, BeginTime, Key, Size, ReqId).
+
 
 %% @doc obj-replication request from remote node.
-%%
-replicate_fun(?REP_REMOTE, Method, Object) ->
+%% @private
+replicate_fun(?REP_REMOTE, Method, #?OBJECT{key = Key,
+                                            dsize = Size,
+                                            req_id = ReqId} = Object) ->
+    BeginTime = leo_date:clock(),
     Ref = make_ref(),
     Ret = case Method of
               ?CMD_PUT ->
+                  ok = leo_metrics_req:notify(?STAT_COUNT_PUT),
                   ?MODULE:put({Object, Ref});
               ?CMD_DELETE ->
+                  ok = leo_metrics_req:notify(?STAT_COUNT_DEL),
                   ?MODULE:delete({Object, Ref})
           end,
-    case Ret of
-        %% for put-operation
-        {ok, Ref, Checksum} ->
-            {ok, Checksum};
-        %% for delete-operation
-        {ok, Ref} ->
-            {ok, 0};
-        {error, Ref, not_found = Cause} ->
-            {error, Cause};
-        {error, Ref, unavailable = Cause} ->
-            {error, Cause};
-        {error, Ref, Cause} ->
-            ?warn("replicate_fun/3", [{cause, Cause}]),
-            {error, Cause}
-    end.
+    replicate_fun_1(?REP_REMOTE, Ret, BeginTime, Key, Size, ReqId).
+
+
+%% @private
+replicate_fun_1(?REP_LOCAL, {ok,_} = Ret, BeginTime, Key, Size, ReqId) ->
+    replicate_fun_1(Ret, BeginTime, Key, Size, ReqId);
+replicate_fun_1(?REP_LOCAL, {error,_}, BeginTime, Key, Size, ReqId) ->
+    replicate_fun_1(error, BeginTime, Key, Size, ReqId);
+replicate_fun_1(?REP_REMOTE, {ok,_Ref, Checksum}, BeginTime, Key, Size, ReqId) ->
+    replicate_fun_1({ok, Checksum}, BeginTime, Key, Size, ReqId);
+replicate_fun_1(?REP_REMOTE, {ok,_Ref}, BeginTime, Key, Size, ReqId) ->
+    replicate_fun_1({ok, 0}, BeginTime, Key, Size, ReqId);
+replicate_fun_1(?REP_REMOTE, {error,_Ref, not_found = Cause}, BeginTime, Key, Size, ReqId) ->
+    replicate_fun_1({error, Cause}, BeginTime, Key, Size, ReqId);
+replicate_fun_1(?REP_REMOTE, {error,_Ref, unavailable = Cause}, BeginTime, Key, Size, ReqId) ->
+    replicate_fun_1({error, Cause}, BeginTime, Key, Size, ReqId);
+replicate_fun_1(?REP_REMOTE, {error,_Ref, Cause}, BeginTime, Key, Size, ReqId) ->
+    ?warn("replicate_fun_1/3", [{request_src, ?REP_REMOTE}, {cause, Cause}]),
+    replicate_fun_1({error, Cause}, BeginTime, Key, Size, ReqId).
+
+%% @private
+replicate_fun_1({ok,_} = Ret, BeginTime, Key, Size, ReqId) ->
+    ?access_log_put(Key, Size, ReqId, BeginTime, ok),
+    Ret;
+replicate_fun_1({error,_} = Ret, BeginTime, Key, Size, ReqId) ->
+    ?access_log_put(?ACC_LOG_L_ERROR, Key, Size, ReqId, BeginTime, error),
+    Ret.
 
 
 %% @doc Being callback, after executed replication of an object
