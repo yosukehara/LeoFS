@@ -2,7 +2,7 @@
 %%
 %% LeoStorage
 %%
-%% Copyright (c) 2012-2017 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -24,7 +24,6 @@
 %%======================================================================
 -module(leo_storage_handler_object).
 
--include("leo_storage.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_mq/include/leo_mq.hrl").
@@ -34,6 +33,7 @@
 -undef(MAX_RETRY_TIMES).
 -include_lib("leo_statistics/include/leo_statistics.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("leo_storage.hrl").
 
 -export([get/1, get/2, get/3, get/4, get/5,
          put/1, put/2, put/3, put/4,
@@ -86,7 +86,7 @@ get(#request{addr_id = AddrId,
                         start_pos = StartPos,
                         end_pos = EndPos,
                         req_id = ReqId}, []);
-%% @deplicated
+
 get({Ref, Key}) ->
     BeginTime = leo_date:clock(),
     ok = leo_metrics_req:notify(?STAT_COUNT_GET),
@@ -326,9 +326,8 @@ get_fun(AddrId, Key, StartPos, EndPos, IsForcedCheck) ->
                                       ETagRet::etag_ret(),
                                       Cause::any()).
 %% @since v2.0.0 - request from leo_gateway
-put(#request{data = Object,
-             req_id = ReqId}) ->
-    put(Object, ReqId, gateway);
+put(#request{req_id = ReqId} = Request) ->
+    put(?transform_request_to_object(Request), ReqId, gateway);
 
 put({#?OBJECT{addr_id = AddrId,
               key = Key,
@@ -517,16 +516,18 @@ delete_chunked_objects(CIndex, ParentKey) ->
 %% API - DELETE
 %%--------------------------------------------------------------------
 %% @doc Remove an object (request from storage)
--spec(delete(ObjAndRef) ->
+-spec(delete(Request) ->
              {ok, Ref} |
-             {error, Ref, Cause} when Ref::reference(),
+             {error, Ref, Cause} when Request::{Ref, Object} | #request{},
+                                      Ref::reference(),
                                       Object::#?OBJECT{},
-                                      ObjAndRef::{Object, Ref},
                                       Cause::any()).
-delete({Object, Ref}) ->
-    AddrId = Object#?OBJECT.addr_id,
-    Key    = Object#?OBJECT.key,
+%% @since v2.0.0 - request from leo_gateway
+delete(#request{req_id = ReqId} = Request) ->
+    delete(?transform_request_to_object(Request), ReqId);
 
+delete({#?OBJECT{addr_id = AddrId,
+                 key = Key} = Object, Ref}) ->
     case leo_object_storage_api:head({AddrId, Key}) of
         {ok, MetaBin} ->
             case catch binary_to_term(MetaBin) of
@@ -566,36 +567,18 @@ delete(Object, ReqId) ->
                                       ReqId::integer()|reference(),
                                       CheckUnderDir::boolean()).
 delete(Object, ReqId, CheckUnderDir) ->
-    BeginTime = leo_date:clock(),
-    Key = Object#?OBJECT.key,
-
-    case replicate_fun(?REP_LOCAL, ?CMD_DELETE,
-                       Object#?OBJECT{method = ?CMD_DELETE,
-                                      data = <<>>,
-                                      dsize = 0,
-                                      clock = leo_date:clock(),
-                                      req_id = ReqId,
-                                      del = ?DEL_TRUE}, gateway) of
-        {ok,_} ->
-            ?access_log_delete(Key, Object#?OBJECT.dsize, ReqId, BeginTime, ok),
-            delete_1(ok, Object, CheckUnderDir);
-        {error, Cause = not_found} ->
-            ?access_log_delete(?ACC_LOG_L_ERROR, Key, Object#?OBJECT.dsize, ReqId, BeginTime, Cause),
-            delete_1({error, Cause}, Object, CheckUnderDir);
-        {error, Cause} ->
-            ?access_log_delete(?ACC_LOG_L_ERROR, Key, Object#?OBJECT.dsize, ReqId, BeginTime, error),
-            ?error("delete/3", [{from, gateway}, {method, del},
-                                {key, Object#?OBJECT.key}, {req_id, ReqId}, {cause, Cause}]),
-            {error, Cause}
-    end.
+    delete(Object, ReqId, CheckUnderDir, 'gateway').
 
 %% @doc Remova an object (request from leo_mq/storage)
 -spec(delete(Object, ReqId, CheckUnderDir, From) ->
              ok | {error, any()} when Object::#?OBJECT{},
                                       ReqId::integer()|reference(),
                                       CheckUnderDir::boolean(),
-                                      From::atom()).
-delete(Object, ReqId, CheckUnderDir, From) ->
+                                      From:: gateway | leo_mq | leo_storage).
+delete(#?OBJECT{key = Key,
+                dsize = DSize} = Object, ReqId, CheckUnderDir, From) ->
+    BeginTime = leo_date:clock(),
+
     case replicate_fun(?REP_LOCAL, ?CMD_DELETE,
                        Object#?OBJECT{method = ?CMD_DELETE,
                                       data = <<>>,
@@ -604,10 +587,15 @@ delete(Object, ReqId, CheckUnderDir, From) ->
                                       req_id = ReqId,
                                       del = ?DEL_TRUE}, From) of
         {ok,_} ->
+            ?access_log_delete(Key, DSize, ReqId, BeginTime, ok),
             delete_1(ok, Object, CheckUnderDir);
         {error, Cause = not_found} ->
+            ?access_log_delete(?ACC_LOG_L_ERROR, Key, DSize,
+                               ReqId, BeginTime, Cause),
             delete_1({error, Cause}, Object, CheckUnderDir);
         {error, Cause} ->
+            ?access_log_delete(?ACC_LOG_L_ERROR, Key, DSize,
+                               ReqId, BeginTime, error),
             {error, Cause}
     end.
 

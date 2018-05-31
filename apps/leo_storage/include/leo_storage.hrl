@@ -879,3 +879,27 @@
                           [atom_to_list(?QUEUE_ID_DEL_DIR), "_", integer_to_list(N)]))
               end, lists:seq(1, ?env_del_dir_workers()))
         end).
+
+-define(transform_request_to_object(_Req),
+        begin
+          #request{key = _Key,
+                   data = _Bin,
+                   meta = _Meta,
+                   msize = _MSize,
+                   dsize = _Size,
+                   cnumber = _CNum,
+                   cindex = _CIndex,
+                   csize = _CSize,
+                   checksum = _Checksum,
+                   req_id = _ReqId} = _Req,
+            #?OBJECT{key = _Key,
+                     data = _Bin,
+                     meta = _Meta,
+                     msize = _MSize,
+                     dsize = _Size,
+                     cnumber = _CNum,
+                     cindex = _CIndex,
+                     csize = _CSize,
+                     checksum = _Checksum,
+                     req_id = _ReqId}
+        end).
