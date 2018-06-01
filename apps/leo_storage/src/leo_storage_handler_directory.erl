@@ -2,7 +2,7 @@
 %%
 %% LeoStorage
 %%
-%% Copyright (c) 2012-2017 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -25,12 +25,14 @@
 -module(leo_storage_handler_directory).
 
 -include("leo_storage.hrl").
+-include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
 -include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
--export([find_by_parent_dir/4
+-export([find_by_parent_dir/1,
+         find_by_parent_dir/4
         ]).
 
 -define(DEF_MAX_KEYS, 1000).
@@ -40,14 +42,23 @@
 %% API
 %%--------------------------------------------------------------------
 %% @doc Find by index from the backenddb.
-%%
--spec(find_by_parent_dir(ParentDir, Delimiter, Marker, MaxKeys) ->
+-spec(find_by_parent_dir(Request) ->
+             {ok, MetadataL} |
+             {error, any()} when Request::#request{},
+                                 MetadataL::[#?METADATA{}]).
+find_by_parent_dir(#request{key = Key,
+                            delimitar = Delimitar,
+                            marker = Marker,
+                            max_keys = MaxKeys}) ->
+    find_by_parent_dir(Key, Delimitar, Marker, MaxKeys).
+
+-spec(find_by_parent_dir(ParentDir, Delimitar, Marker, MaxKeys) ->
              {ok, list()} |
              {error, any()} when ParentDir::binary(),
-                                 Delimiter::binary()|null,
+                                 Delimitar::binary()|null,
                                  Marker::binary()|null,
                                  MaxKeys::integer()).
-find_by_parent_dir(ParentDir, _Delimiter, Marker, MaxKeys) ->
+find_by_parent_dir(ParentDir, _Delimitar, Marker, MaxKeys) ->
     NewMaxKeys = case is_integer(MaxKeys) of
                      true  -> MaxKeys;
                      false -> ?DEF_MAX_KEYS

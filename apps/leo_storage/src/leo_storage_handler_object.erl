@@ -39,7 +39,7 @@
          put/1, put/2, put/3, put/4,
          delete/1, delete/2, delete/3, delete/4,
          delete_objects_under_dir/1,
-         head/2, head/3,
+         head/1, head/2, head/3,
          head_with_calc_md5/3,
          replicate/1, replicate/3,
          prefix_search/3, prefix_search_and_remove_objects/3,
@@ -634,6 +634,16 @@ delete_objects_under_dir(Object) ->
 %%--------------------------------------------------------------------
 %% API - HEAD
 %%--------------------------------------------------------------------
+-spec(head(Request) ->
+             {ok, Metadata} |
+             not_found |
+             {error, Cause} when Request::#request{},
+                                 Metadata::#?METADATA{},
+                                 Cause::any()).
+head(#request{addr_id = AddrId,
+              key = Key}) ->
+    head(AddrId, Key, true).
+
 %% @doc retrieve a meta-data from mata-data-server (file).
 -spec(head(AddrId, Key) ->
              {ok, Metadata} |
