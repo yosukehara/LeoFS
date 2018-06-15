@@ -21,9 +21,10 @@
 %%======================================================================
 -module(leo_gateway_http_req_handler).
 
--include("leo_http.hrl").
 -include_lib("leo_dcerl/include/leo_dcerl.hrl").
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("leo_http.hrl").
 
 -export([handle/4]).
 

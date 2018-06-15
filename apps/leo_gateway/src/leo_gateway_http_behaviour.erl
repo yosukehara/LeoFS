@@ -21,6 +21,7 @@
 %%======================================================================
 -module(leo_gateway_http_behaviour).
 
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
 -include("leo_http.hrl").
 
 

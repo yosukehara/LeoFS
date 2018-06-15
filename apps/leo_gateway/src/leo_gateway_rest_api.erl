@@ -23,17 +23,19 @@
 
 -behaviour(leo_gateway_http_behaviour).
 
+-include_lib("leo_logger/include/leo_logger.hrl").
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
+-include_lib("eunit/include/eunit.hrl").
+-include("leo_gateway.hrl").
+-include("leo_http.hrl").
+
+
 -export([start/2, stop/0,
          init/3, handle/2, terminate/3]).
 -export([onrequest/1, onresponse/1]).
 -export([get_bucket/3, put_bucket/3, delete_bucket/3, head_bucket/3,
          get_object/3, put_object/3, delete_object/3, head_object/3,
          get_object_with_cache/4, range_object/3]).
-
--include("leo_gateway.hrl").
--include("leo_http.hrl").
--include_lib("leo_logger/include/leo_logger.hrl").
--include_lib("eunit/include/eunit.hrl").
 
 -compile({inline, [handle/2, handle_1/3]}).
 

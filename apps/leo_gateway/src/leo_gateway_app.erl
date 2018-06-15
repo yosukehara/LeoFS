@@ -21,11 +21,6 @@
 %%======================================================================
 -module(leo_gateway_app).
 
--include("leo_gateway.hrl").
--include("leo_nfs_mount3.hrl").
--include("leo_nfs_proto3.hrl").
--include("leo_nlm_proto4.hrl").
--include("leo_http.hrl").
 -include_lib("leo_cache/include/leo_cache.hrl").
 -undef(error).
 -undef(warn).
@@ -33,10 +28,16 @@
 -include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
 -include_lib("leo_statistics/include/leo_statistics.hrl").
--include_lib("nfs_rpc_server/src/nfs_rpc_app.hrl").
 -include_lib("leo_watchdog/include/leo_watchdog.hrl").
+-include_lib("nfs_rpc_server/src/nfs_rpc_app.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("leo_gateway.hrl").
+-include("leo_nfs_mount3.hrl").
+-include("leo_nfs_proto3.hrl").
+-include("leo_nlm_proto4.hrl").
+-include("leo_http.hrl").
 
 -behaviour(application).
 -export([start/0, start/2, stop/1, prep_stop/1,

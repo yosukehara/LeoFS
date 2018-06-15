@@ -23,8 +23,6 @@
 
 -behaviour(leo_gateway_http_behaviour).
 
--include("leo_gateway.hrl").
--include("leo_http.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
@@ -34,6 +32,8 @@
 -include_lib("leo_s3_libs/include/leo_s3_endpoint.hrl").
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
+-include("leo_gateway.hrl").
+-include("leo_http.hrl").
 
 -export([start/2, stop/0,
          init/3, handle/2, terminate/3]).
@@ -647,16 +647,17 @@ put_object(Directive, Req, Key, #req_params{handler = ?PROTO_HANDLER_S3,
 %% @private
 put_object_1(Req, Src, Key, Meta, Bin, #req_params{bucket_name = BucketName,
                                                    custom_metadata = CMetaBin,
-                                                   begin_time = BeginTime}) ->
+                                                   begin_time = BeginTime} = ReqParams) ->
     Size = size(Bin),
     SrcDst = <<Src/binary, " -> ", Key/binary>>,
-
-    case leo_gateway_rpc_handler:put(
-           #request{key = Key,
-                    data = Bin,
-                    meta = CMetaBin,
-                    dsize = Size,
-                    msize = byte_size(CMetaBin)}) of
+    Req = ?ssec_items_in_req_params_to_request(
+             ReqParams,
+             #request{key = Key,
+                      data = Bin,
+                      meta = CMetaBin,
+                      dsize = Size,
+                      msize = byte_size(CMetaBin)}),
+    case leo_gateway_rpc_handler:put(Req) of
         {ok,_ETag} ->
             ?access_log_copy(BucketName, SrcDst, Size, ?HTTP_ST_OK, BeginTime),
             resp_copy_obj_xml(Req, Meta);

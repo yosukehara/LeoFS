@@ -31,6 +31,8 @@
 -define(S3_HTTP, leo_s3_http).
 -define(DEF_LAYERS_OF_DIRS, {1, 64}).
 
+
+-undef(DEF_TIMEOUT).
 -ifdef(TEST).
 -define(DEF_TIMEOUT, 1000).
 -define(DEF_REQ_TIMEOUT, 1000).

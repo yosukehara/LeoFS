@@ -21,14 +21,15 @@
 %%======================================================================
 -module(leo_gateway_http_commons).
 
--include("leo_gateway.hrl").
--include("leo_http.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
 -include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
 -include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
 -include_lib("eunit/include/eunit.hrl").
+
+-include("leo_gateway.hrl").
+-include("leo_http.hrl").
 
 -export([start/1, start/2]).
 -export([onrequest/2, onresponse/2]).
@@ -38,20 +39,6 @@
          range_object/3,
          do_health_check/0]).
 -export([reload_http_header_conf/0, validate_http_header_conf/0]).
-
--record(req_large_obj, {handler :: pid(),
-                        bucket_name = <<>> :: binary(),
-                        bucket_info = #?BUCKET{} :: #?BUCKET{},
-                        key = <<>> :: binary(),
-                        meta = <<>> :: binary(),
-                        length :: pos_integer(),
-                        timeout_for_body = 0 :: non_neg_integer(),
-                        chunked_size = 0 :: non_neg_integer(),
-                        reading_chunked_size = 0 :: non_neg_integer(),
-                        transfer_decode_fun :: function(),
-                        transfer_decode_state :: #aws_chunk_decode_state{}|undefined,
-                        begin_time = 0 :: non_neg_integer()
-                       }).
 
 
 %%--------------------------------------------------------------------
@@ -649,21 +636,23 @@ move_large_object(#?METADATA{dsize = Size}, DestKey,
                               custom_metadata = CMeta,
                               bucket_name = BucketName,
                               bucket_info = BucketInfo,
-                              begin_time = BeginTime}, ReadHandler) ->
+                              begin_time = BeginTime} = ReqParams, ReadHandler) ->
     {ok, WriteHandler} =
         leo_large_object_put_handler:start_link(
           BucketInfo, DestKey, ChunkedSize),
     try
         case move_large_object_1(
                leo_large_object_move_handler:get_chunk_obj(ReadHandler),
-               #req_large_obj{handler = WriteHandler,
-                              bucket_name = BucketName,
-                              bucket_info = BucketInfo,
-                              key = DestKey,
-                              meta = CMeta,
-                              length = Size,
-                              chunked_size = ChunkedSize,
-                              begin_time = BeginTime}, ReadHandler) of
+               ?ssec_items_in_req_params_to_req_large_obj(
+                  ReqParams,
+                  #req_large_obj{handler = WriteHandler,
+                                 bucket_name = BucketName,
+                                 bucket_info = BucketInfo,
+                                 key = DestKey,
+                                 meta = CMeta,
+                                 length = Size,
+                                 chunked_size = ChunkedSize,
+                                 begin_time = BeginTime}), ReadHandler) of
             ok ->
                 ok;
             {error, Cause} ->
@@ -703,22 +692,24 @@ move_large_object_1(done, #req_large_obj{handler = WriteHandler,
                                          meta = CMeta,
                                          length = Size,
                                          chunked_size = ChunkedSize,
-                                         begin_time = BeginTime},_ReadHandler) ->
+                                         begin_time = BeginTime} = ReqLargeObj,_ReadHandler) ->
     case catch leo_large_object_put_handler:result(WriteHandler) of
         {ok, #large_obj_info{length = TotalSize,
                              num_of_chunks = TotalChunks,
                              md5_context = Digest}} when Size == TotalSize ->
             Digest_1 = leo_hex:raw_binary_to_integer(Digest),
             %% @TODO Object Encryption (2018-05-17)
-            case leo_gateway_rpc_handler:put(#request{key = Key,
-                                                      data = ?BIN_EMPTY,
-                                                      meta = CMeta,
-                                                      msize = byte_size(CMeta),
-                                                      dsize = Size,
-                                                      cnumber = TotalChunks,
-                                                      cindex = 0,
-                                                      csize = ChunkedSize,
-                                                      checksum = Digest_1}) of
+            case leo_gateway_rpc_handler:put(
+                   ?ssec_items_in_req_large_obj_to_request(
+                      ReqLargeObj, #request{key = Key,
+                                            data = ?BIN_EMPTY,
+                                            meta = CMeta,
+                                            msize = byte_size(CMeta),
+                                            dsize = Size,
+                                            cnumber = TotalChunks,
+                                            cindex = 0,
+                                            csize = ChunkedSize,
+                                            checksum = Digest_1})) of
                 {ok, _ETag} ->
                     ?access_log_put(BucketName, Key, Size, ?HTTP_ST_OK, BeginTime),
                     ok;
@@ -807,14 +798,24 @@ put_small_object({ok, {Size, Bin, Req}}, Key, #req_params{bucket_name = BucketNa
                                                           custom_metadata = CMeta,
                                                           upload_part_num = UploadPartNum,
                                                           has_inner_cache = HasInnerCache,
-                                                          begin_time = BeginTime}) ->
+                                                          begin_time = BeginTime,
+                                                          ssec_algorithm = SSEC_Algorithm,
+                                                          ssec_key = SSEC_Key,
+                                                          ssec_key_hash = SSEC_KeyHash
+                                                          %% ssec_algorithm_cp_src = _SSEC_CP_Algorithm,
+                                                          %% ssec_key_cp_src = _SSEC_CP_Key,
+                                                          %% ssec_key_hash_cp_src = _SSEC_CP_Hash
+                                                         }) ->
     case leo_gateway_rpc_handler:put(
            #request{key = Key,
                     data = Bin,
                     meta = CMeta,
                     msize = byte_size(CMeta),
                     dsize = Size,
-                    cindex = UploadPartNum}) of
+                    cindex = UploadPartNum,
+                    ssec_algorithm = SSEC_Algorithm,
+                    ssec_key = SSEC_Key,
+                    ssec_key_hash = SSEC_KeyHash}) of
         {ok, ETag} ->
             case (HasInnerCache
                   andalso binary_is_contained(Key, 10) == false) of
@@ -889,7 +890,7 @@ put_large_object(Req, Key, Size, #req_params{bucket_name = BucketName,
                                              reading_chunked_obj_len = ReadingChunkedSize,
                                              transfer_decode_fun = TransferDecodeFun,
                                              transfer_decode_state = TransferDecodeState,
-                                             begin_time = BeginTime})->
+                                             begin_time = BeginTime} = ReqParams)->
     %% launch 'large_object_handler'
     {ok, Handler} =
         leo_large_object_put_handler:start_link(BucketInfo, Key, ChunkedSize),
@@ -910,17 +911,19 @@ put_large_object(Req, Key, Size, #req_params{bucket_name = BucketName,
                      _ ->
                          [{transfer_decode, TransferDecodeFun, TransferDecodeState} | BodyOpts]
                  end,
-    Reply = case put_large_object_1(cowboy_req:body(Req, BodyOpts_1),
-                                    #req_large_obj{handler = Handler,
-                                                   key = Key,
-                                                   meta = CMeta,
-                                                   length = Size,
-                                                   timeout_for_body = Timeout4Body,
-                                                   chunked_size = ChunkedSize,
-                                                   reading_chunked_size = ReadingChunkedSize,
-                                                   transfer_decode_fun = TransferDecodeFun,
-                                                   transfer_decode_state = TransferDecodeState,
-                                                   begin_time = BeginTime}) of
+    Reply = case put_large_object_1(
+                   cowboy_req:body(Req, BodyOpts_1),
+                   ?ssec_items_in_req_params_to_req_large_obj(
+                      ReqParams, #req_large_obj{handler = Handler,
+                                                key = Key,
+                                                meta = CMeta,
+                                                length = Size,
+                                                timeout_for_body = Timeout4Body,
+                                                chunked_size = ChunkedSize,
+                                                reading_chunked_size = ReadingChunkedSize,
+                                                transfer_decode_fun = TransferDecodeFun,
+                                                transfer_decode_state = TransferDecodeState,
+                                                begin_time = BeginTime})) of
                 {error, ErrorRet} ->
                     ok = leo_large_object_put_handler:rollback(Handler),
                     {Req_1, Cause} = case ErrorRet of
@@ -982,7 +985,7 @@ put_large_object_1({ok, Data, Req}, #req_large_obj{handler = Handler,
                                                    key = Key,
                                                    meta = CMeta,
                                                    length = Size,
-                                                   chunked_size = ChunkedSize}) ->
+                                                   chunked_size = ChunkedSize} = ReqLargeObj) ->
     case catch leo_large_object_put_handler:put(Handler, Data) of
         ok ->
             case catch leo_large_object_put_handler:result(Handler) of
@@ -990,15 +993,18 @@ put_large_object_1({ok, Data, Req}, #req_large_obj{handler = Handler,
                                      num_of_chunks = TotalChunks,
                                      md5_context = Digest}} when Size == TotalSize ->
                     Digest_1 = leo_hex:raw_binary_to_integer(Digest),
+
+                    %% @OTODO Object-encryption
                     case leo_gateway_rpc_handler:put(
-                           #request{key = Key,
-                                    data = ?BIN_EMPTY,
-                                    meta = CMeta,
-                                    msize = byte_size(CMeta),
-                                    dsize = Size,
-                                    cnumber = TotalChunks,
-                                    csize = ChunkedSize,
-                                    checksum = Digest_1}) of
+                           ?ssec_items_in_req_large_obj_to_request(
+                              ReqLargeObj, #request{key = Key,
+                                                    data = ?BIN_EMPTY,
+                                                    meta = CMeta,
+                                                    msize = byte_size(CMeta),
+                                                    dsize = Size,
+                                                    cnumber = TotalChunks,
+                                                    csize = ChunkedSize,
+                                                    checksum = Digest_1})) of
                         {ok,_ETag} ->
                             Header = [?SERVER_HEADER,
                                       {?HTTP_HEADER_RESP_ETAG, ?http_etag(Digest_1)}],

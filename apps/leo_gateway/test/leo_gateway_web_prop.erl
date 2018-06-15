@@ -28,10 +28,11 @@
 -export([test/0, test/1]).
 -export([prop_http_req/0]).
 
+-include_lib("leo_object_storage/include/leo_object_storage.hrl").
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
+-include_lib("proper/include/proper.hrl").
 -include("leo_gateway.hrl").
 -include("leo_http.hrl").
--include_lib("leo_object_storage/include/leo_object_storage.hrl").
--include_lib("proper/include/proper.hrl").
 
 
 -define(TARGET_HOST, "localhost").

@@ -21,10 +21,11 @@
 %%======================================================================
 -module(leo_large_object_commons).
 
+-include_lib("leo_logger/include/leo_logger.hrl").
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
+-include_lib("eunit/include/eunit.hrl").
 -include("leo_gateway.hrl").
 -include("leo_http.hrl").
--include_lib("leo_logger/include/leo_logger.hrl").
--include_lib("eunit/include/eunit.hrl").
 
 -export([iterator_init/2, iterator_next/1, iterator_set_chunked/3]).
 -export([delete_chunked_objects/1]).

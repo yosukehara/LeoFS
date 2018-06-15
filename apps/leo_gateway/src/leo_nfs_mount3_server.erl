@@ -21,13 +21,14 @@
 %%======================================================================
 -module(leo_nfs_mount3_server).
 
--include("leo_http.hrl").
--include("leo_gateway.hrl").
--include("leo_nfs_mount3.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_s3_libs/include/leo_s3_auth.hrl").
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("leo_http.hrl").
+-include("leo_gateway.hrl").
+-include("leo_nfs_mount3.hrl").
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 -export([mountproc_null_3/2,

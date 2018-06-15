@@ -21,8 +21,6 @@
 %%======================================================================
 -module(leo_gateway_rpc_handler).
 
--include("leo_http.hrl").
--include("leo_gateway.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
@@ -31,6 +29,8 @@
 -undef(MAX_RETRY_TIMES).
 -include_lib("leo_statistics/include/leo_statistics.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("leo_http.hrl").
+-include("leo_gateway.hrl").
 
 -export([head/1,
          get/1,
@@ -169,6 +169,16 @@ put(#request{key = Key} = Req) ->
                 addr_id = AddrId,
                 timestamp = Timestamp,
                 req_id = ReqId} = get_request_parameters(put, Key),
+    %% @DEBUG:
+    %% #request{ssec_algorithm = SSEC_Algorithm,
+    %%          ssec_key = SSEC_Key,
+    %%          ssec_key_hash = SSEC_KeyHash,
+    %%          ssec_algorithm_cp_src = _SSEC_CP_Algorithm,
+    %%          ssec_key_cp_src = _SSEC_CP_Key,
+    %%          ssec_key_hash_cp_src = _SSEC_CP_Hash} = Req,
+    %% ?debugVal(SSEC_Algorithm),
+    %% ?debugVal(SSEC_Key),
+    %% ?debugVal(SSEC_KeyHash),
     invoke(Reds, ?MOD_STORAGE_OBJ_HANDLER, put, Req#request{method = ?HTTP_PUT_ATOM,
                                                             addr_id = AddrId,
                                                             timestamp = Timestamp,

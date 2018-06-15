@@ -629,6 +629,57 @@
          ssec_copy_src_key_hash = <<>> :: binary()           %% (copy source) Base64-encoded 128-bit MD5 digest of the encryption key
         }).
 
+-record(req_large_obj, {handler :: pid(),
+                        bucket_name = <<>> :: binary(),
+                        bucket_info = #?BUCKET{} :: #?BUCKET{},
+                        key = <<>> :: binary(),
+                        meta = <<>> :: binary(),
+                        length :: pos_integer(),
+                        timeout_for_body = 0 :: non_neg_integer(),
+                        chunked_size = 0 :: non_neg_integer(),
+                        reading_chunked_size = 0 :: non_neg_integer(),
+                        transfer_decode_fun :: function(),
+                        transfer_decode_state :: #aws_chunk_decode_state{}|undefined,
+                        begin_time = 0 :: non_neg_integer(),
+                        %% for SSE-C
+                        ssec_algorithm = <<>> :: binary(),
+                        ssec_key = <<>> :: binary(),
+                        ssec_key_hash = <<>> :: binary(),
+                        ssec_copy_src_algorithm = <<>> :: binary(),
+                        ssec_copy_src_key = <<>> :: binary(),
+                        ssec_copy_src_key_hash = <<>> :: binary()
+                       }).
+
+-define(ssec_items_in_req_params_to_request(_ReqParams,_Req),
+        begin
+            #req_params{ssec_algorithm =_SSEC_Algorithm,
+                        ssec_key =_SSEC_Key,
+                        ssec_key_hash =_SSEC_KeyHash} = _ReqParams,
+            _Req#request{ssec_algorithm =_SSEC_Algorithm,
+                         ssec_key =_SSEC_Key,
+                         ssec_key_hash =_SSEC_KeyHash}
+        end).
+
+-define(ssec_items_in_req_params_to_req_large_obj(_ReqParams,_ReqLargeObj),
+        begin
+            #req_params{ssec_algorithm =_SSEC_Algorithm,
+                        ssec_key =_SSEC_Key,
+                        ssec_key_hash =_SSEC_KeyHash} = _ReqParams,
+            _ReqLargeObj#req_large_obj{ssec_algorithm =_SSEC_Algorithm,
+                                       ssec_key =_SSEC_Key,
+                                       ssec_key_hash =_SSEC_KeyHash}
+        end).
+
+-define(ssec_items_in_req_large_obj_to_request(_ReqLargeObj,_Req),
+        begin
+            #req_large_obj{ssec_algorithm =_SSEC_Algorithm,
+                           ssec_key =_SSEC_Key,
+                           ssec_key_hash =_SSEC_KeyHash} = _ReqLargeObj,
+            _Req#request{ssec_algorithm =_SSEC_Algorithm,
+                         ssec_key =_SSEC_Key,
+                         ssec_key_hash =_SSEC_KeyHash}
+        end).
+
 -record(transport_record, {transport :: module(),
                            socket :: inet:socket(),
                            sending_chunked_obj_len :: pos_integer()

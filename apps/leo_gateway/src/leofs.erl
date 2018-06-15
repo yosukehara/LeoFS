@@ -21,10 +21,11 @@
 %%====================================================================
 -module(leofs).
 
--include("leo_http.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
+-include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("leo_http.hrl").
 
 -export([start/0, stop/0,
          get/1, put/2, head/1, delete/1]).

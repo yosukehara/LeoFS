@@ -21,14 +21,14 @@
 %%====================================================================
 -module(leo_gateway_api).
 
--include("leo_gateway.hrl").
--include("leo_http.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
 -include_lib("leo_logger/include/leo_logger.hrl").
 -include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
 -include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
 -include_lib("leo_watchdog/include/leo_watchdog.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("leo_gateway.hrl").
+-include("leo_http.hrl").
 
 -export([get_node_status/0,
          register_in_monitor/1, register_in_monitor/2,

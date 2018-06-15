@@ -25,8 +25,6 @@
 %%====================================================================
 -module(leo_gateway_rpc_handler_tests).
 
--include("leo_gateway.hrl").
--include("leo_http.hrl").
 -include_lib("leo_s3_libs/include/leo_s3_bucket.hrl").
 -include_lib("leo_s3_libs/include/leo_s3_auth.hrl").
 -include_lib("leo_commons/include/leo_commons.hrl").
@@ -34,6 +32,8 @@
 -include_lib("leo_object_storage/include/leo_object_storage.hrl").
 -include_lib("leo_redundant_manager/include/leo_redundant_manager.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("leo_gateway.hrl").
+-include("leo_http.hrl").
 
 
 %%--------------------------------------------------------------------
