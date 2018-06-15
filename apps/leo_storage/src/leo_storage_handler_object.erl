@@ -326,7 +326,18 @@ get_fun(AddrId, Key, StartPos, EndPos, IsForcedCheck) ->
                                       ETagRet::etag_ret(),
                                       Cause::any()).
 %% @since v2.0.0 - request from leo_gateway
-put(#request{req_id = ReqId} = Request) ->
+put(#request{req_id = ReqId,
+             ssec_algorithm = SSEC_Algorithm,
+             ssec_key = SSEC_Key,
+             ssec_key_hash = SSEC_KeyHash,
+             ssec_algorithm_cp_src = _SSEC_CP_Algorithm,
+             ssec_key_cp_src = _SSEC_CP_Key,
+             ssec_key_hash_cp_src = _SSEC_CP_Hash} = Request) ->
+    ?debugVal(ReqId),
+    ?debugVal(SSEC_Algorithm),
+    ?debugVal(SSEC_Key),
+    ?debugVal(SSEC_KeyHash),
+    %% @TODO
     put(?transform_request_to_object(Request), ReqId, gateway);
 
 put({#?OBJECT{addr_id = AddrId,
@@ -375,7 +386,6 @@ put(Object, ReqId) ->
                                               ETag::{etag, non_neg_integer()}).
 put(Object, ReqId, From) ->
     Method = ?request_verb(Object),
-
     case replicate_fun(?REP_LOCAL, ?CMD_PUT,
                        Object#?OBJECT{method = Method,
                                       clock = leo_date:clock(),
@@ -1385,8 +1395,6 @@ replicate_fun(?REP_LOCAL, Method, #?OBJECT{addr_id = AddrId,
                                            dsize = Size,
                                            req_id = ReqId} = Object, From) ->
     BeginTime = leo_date:clock(),
-
-    %% Check state of the node
     Ret = case leo_watchdog_state:find_not_safe_items(?WD_EXCLUDE_ITEMS) of
               not_found ->
                   case leo_redundant_manager_api:get_redundancies_by_addr_id(put, AddrId) of
