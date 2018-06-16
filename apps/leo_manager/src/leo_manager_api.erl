@@ -1473,23 +1473,64 @@ recover_remote([Node|Rest], AddrId, Key, Errors) ->
             recover_remote(Rest, AddrId, Key, [Cause|Errors])
     end.
 
-%% @doc Recover key/node
--spec(recover(string(), atom()|string(), boolean()) ->
-             ok | {error, any()}).
-recover(?RECOVER_FILE, Key, true) ->
-    Key1 = list_to_binary(Key),
-    case leo_redundant_manager_api:get_redundancies_by_key(Key1) of
+recover_remote(Key) ->
+    case leo_redundant_manager_api:get_redundancies_by_key(Key) of
         {ok, #redundancies{nodes = Redundancies, id = AddrId}} ->
             Nodes = [N || #redundant_node{node = N} <- Redundancies],
             case rpc:multicall(Nodes, ?API_STORAGE, synchronize,
-                               [Key1, 'error_msg_replicate_data'], ?DEF_TIMEOUT) of
+                               [Key, 'error_msg_replicate_data'], ?DEF_TIMEOUT) of
                 {_ResL, []} ->
-                    recover_remote(Nodes, AddrId, Key1, []);
+                    recover_remote(Nodes, AddrId, Key, []);
                 {_, BadNodes} ->
                     {error, BadNodes}
             end;
         _ ->
             {error, ?ERROR_COULD_NOT_GET_RING}
+    end.
+
+%% @doc Recover key/node
+-spec(recover(string(), atom()|string(), boolean()) ->
+             ok | {error, any()}).
+recover(?RECOVER_FILE, Key, true) ->
+    KeyBin = list_to_binary(Key),
+    case leo_redundant_manager_api:get_redundancies_by_key(Key) of
+        {ok, #redundancies{nodes = Redundancies, id = AddrId}} ->
+            [Node|_] = [N || #redundant_node{node = N} <- Redundancies],
+            case rpc:call(Node, leo_storage_handler_object, get_chunked_object_key_list,
+                         [AddrId, KeyBin], ?DEF_TIMEOUT) of
+                {ok, KeyList} ->
+                    RetL = [recover_remote(K) || K <- KeyList],
+                    case lists:all(fun(ok) -> true;
+                                      (_) -> false end, RetL) of
+                        true ->
+                            ok;
+                        false ->
+                            {error, ?ERROR_COULD_NOT_RECOVER}
+                    end;
+                {error, _Cause} ->
+                    {error, ?ERROR_COULD_NOT_RECOVER};
+                {badrpc, _Cause} ->
+                    {error, ?ERROR_COULD_NOT_RECOVER}
+            end;
+        _ ->
+            {error, ?ERROR_COULD_NOT_GET_RING}
+    end;
+
+recover(?RECOVER_CONSISTENCY, Node, true) when is_list(Node) ->
+    recover(?RECOVER_CONSISTENCY, list_to_atom(Node), true);
+recover(?RECOVER_CONSISTENCY, Node, true) ->
+    %% Check the target node and system-state
+    case leo_misc:node_existence(Node) of
+        true ->
+            Ret = case leo_redundant_manager_api:get_member_by_node(Node) of
+                      {ok, #member{state = ?STATE_RUNNING}} ->
+                          true;
+                      _ ->
+                          false
+                  end,
+            recover_consistency_1(Ret, Node);
+        false ->
+            {error, ?ERROR_COULD_NOT_CONNECT}
     end;
 
 recover(?RECOVER_NODE, Node, true) when is_list(Node) ->
@@ -1664,6 +1705,21 @@ has_same_avs_conf(RetL) ->
     {lists:all(fun(Elem) ->
                        Elem == H
                end, Rest), length(H)}.
+
+%% @doc Recover consistency of the target node
+%% @private
+recover_consistency_1(true, Node) ->
+    case rpc:call(Node, ?API_STORAGE, synchronize,
+                  [], ?DEF_TIMEOUT) of
+        ok ->
+            ok;
+        {_, Cause} ->
+            ?warn("recover_consistency_1/2",
+                  [{cause, Cause}]),
+            {error, Cause}
+    end;
+recover_consistency_1(false,_) ->
+    {error, ?ERROR_NOT_SATISFY_CONDITION}.
 
 %% @doc Execute recovery of the target node
 %%      Check conditions

@@ -2,7 +2,7 @@
 %%
 %% LeoManager
 %%
-%% Copyright (c) 2012-2017 Rakuten, Inc.
+%% Copyright (c) 2012-2018 Rakuten, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -279,21 +279,39 @@ system_info_and_nodes_stat(Props) ->
 system_conf_with_node_stat(FormattedSystemConf, []) ->
     FormattedSystemConf;
 system_conf_with_node_stat(FormattedSystemConf, Nodes) ->
-    Col_1_Len = lists:foldl(fun({_,N,_,_,_,_}, Acc) ->
-                                    Len = length(N),
-                                    case (Len > Acc) of
-                                        true  -> Len;
-                                        false -> Acc
-                                    end
-                            end, 0, Nodes) + 5,
+    Col_1_Len = lists:foldl(
+                  fun(#node_state_for_output{node = N}, Acc) ->
+                          Len = length(N),
+                          case (Len > Acc) of
+                              true  ->
+                                  Len;
+                              false ->
+                                  Acc
+                          end
+                  end, 0, Nodes) + 5,
+    Col_2_Len = lists:foldl(
+                  fun(#node_state_for_output{rack_id = R}, Acc) ->
+                          Len = length(R),
+                          case (Len > Acc) of
+                              true  ->
+                                  Len;
+                              false ->
+                                  Acc
+                          end
+                  end, 0, Nodes) + 7,
+
     CellColumns = [{"type", 6},
                    {"node", Col_1_Len},
                    {"state", 12},
+                   {"rack id", Col_2_Len},
                    {"current ring", 14},
                    {"prev ring", 14},
                    {"updated at", 28},
                    {'$end', 0}],
-    LenPerCol = lists:map(fun({_, Len}) -> Len end, CellColumns),
+    LenPerCol = lists:map(
+                  fun({_, Len}) ->
+                          Len
+                  end, CellColumns),
 
 
     Fun1 = fun(Col, Str) ->
@@ -317,14 +335,20 @@ system_conf_with_node_stat(FormattedSystemConf, Nodes) ->
            end,
     Header2 = lists:foldl(Fun2, [], CellColumns),
 
-    Fun3 = fun(N, List) ->
-                   {Type, Alias, State, RingHash0, RingHash1, When} = N,
+    Fun3 = fun(#node_state_for_output{node = Node,
+                                      type = Type,
+                                      state = State,
+                                      rack_id = RackId,
+                                      ring_hash_new = RingHashNew,
+                                      ring_hash_old = RingHashOld,
+                                      when_is = When} = _N, List) ->
                    FormattedDate = leo_date:date_format(When),
-                   Ret = lists:append([string:centre(Type,    lists:nth(1,LenPerCol)), ?SEPARATOR,
-                                       string:left(Alias,     lists:nth(2,LenPerCol)), ?SEPARATOR,
-                                       string:left(State,     lists:nth(3,LenPerCol)), ?SEPARATOR,
-                                       string:left(RingHash0, lists:nth(4,LenPerCol)), ?SEPARATOR,
-                                       string:left(RingHash1, lists:nth(5,LenPerCol)), ?SEPARATOR,
+                   Ret = lists:append([string:centre(Type, lists:nth(1,LenPerCol)), ?SEPARATOR,
+                                       string:left(Node, lists:nth(2,LenPerCol)), ?SEPARATOR,
+                                       string:left(State, lists:nth(3,LenPerCol)), ?SEPARATOR,
+                                       string:left(RackId, lists:nth(4,LenPerCol)), ?SEPARATOR,
+                                       string:left(RingHashNew, lists:nth(5,LenPerCol)), ?SEPARATOR,
+                                       string:left(RingHashOld, lists:nth(6,LenPerCol)), ?SEPARATOR,
                                        FormattedDate,
                                        ?CRLF]),
                    List ++ [Ret]
@@ -537,7 +561,7 @@ node_stat(?SERVER_TYPE_GATEWAY, State) ->
 node_stat(?SERVER_TYPE_STORAGE, State) ->
     Version = leo_misc:get_value('version', State, []),
     NumOfVNodes = leo_misc:get_value('num_of_vnodes', State, []),
-    _GrpLevel2 = leo_misc:get_value('grp_level_2', State, []),
+    GrpLevel2 = leo_misc:get_value('grp_level_2', State, []),
     Directories = leo_misc:get_value('dirs', State, []),
     RingHashes = leo_misc:get_value('ring_checksum', State, []),
     Statistics = leo_misc:get_value('statistics', State, []),
@@ -590,6 +614,7 @@ node_stat(?SERVER_TYPE_STORAGE, State) ->
                                 "--------------------------------------+--------------------------------------\r\n",
                                 "                              version | ~s\r\n",
                                 "                     number of vnodes | ~w\r\n",
+                                "                      rack id (group) | ~s\r\n",
                                 "                    object containers | ~s\r\n",
                                 "                        log directory | ~s\r\n",
                                 "                            log level | ~s\r\n",
@@ -662,6 +687,7 @@ node_stat(?SERVER_TYPE_STORAGE, State) ->
                    %% Basic Conf
                    Version,
                    NumOfVNodes,
+                   GrpLevel2,
                    ObjContainer_1,
                    leo_misc:get_value('log', Directories, []),
                    LogLevel,
@@ -827,8 +853,8 @@ du(_, _) ->
 mq_stats([]) ->
     [];
 mq_stats(Stats) ->
-    Header = "              id                |    state    | number of msgs | batch of msgs  |    interval    |                 description                 \r\n"
-        ++   "--------------------------------+-------------+----------------|----------------|----------------|---------------------------------------------\r\n",
+    Header = "              id                |    state    | number of msgs | batch of msgs  |    interval    |                                 description                            \r\n"
+        ++   "--------------------------------+-------------+----------------|----------------|----------------|-------------------------------------------------------------------------\r\n",
     Output = lists:foldl(
                fun(#mq_state{id = Id,
                              state = ConsumerStats,
@@ -843,7 +869,7 @@ mq_stats(Stats) ->
                                      string:left(integer_to_list(NumOfMsgs), 14), ?SEPARATOR,
                                      string:left(integer_to_list(BatchOfMsgs), 14), ?SEPARATOR,
                                      string:left(integer_to_list(Interval), 14), ?SEPARATOR,
-                                     string:left(Desc, 44), ?CRLF])
+                                     string:left(Desc, 72), ?CRLF])
                end, Header, Stats),
     Output.
 
@@ -1225,22 +1251,24 @@ acls(ACLs) ->
              string()).
 cluster_status(Stats) ->
     Col1Min = 10, %% cluster-id
-    Col_1_Len = lists:foldl(fun(N, Acc) ->
+    Col_1_Len = lists:foldl(
+                  fun(N, Acc) ->
 
-                                    Len = length(atom_to_list(leo_misc:get_value('cluster_id', N))),
-                                    case (Len > Acc) of
-                                        true -> Len;
-                                        false -> Acc
-                                    end
-                            end, Col1Min, Stats),
+                          Len = length(atom_to_list(leo_misc:get_value('cluster_id', N))),
+                          case (Len > Acc) of
+                              true -> Len;
+                              false -> Acc
+                          end
+                  end, Col1Min, Stats),
     Col2Min = 10, %% dc-id
-    Col_2_Len = lists:foldl(fun(N, Acc) ->
-                                    Len = length(atom_to_list(leo_misc:get_value('dc_id', N))),
-                                    case (Len > Acc) of
-                                        true -> Len;
-                                        false -> Acc
-                                    end
-                            end, Col2Min, Stats),
+    Col_2_Len = lists:foldl(
+                  fun(N, Acc) ->
+                          Len = length(atom_to_list(leo_misc:get_value('dc_id', N))),
+                          case (Len > Acc) of
+                              true -> Len;
+                              false -> Acc
+                          end
+                  end, Col2Min, Stats),
     Col_3_Len = 12, %% status
     Col_4_Len = 14, %% # of storages
     Col_5_Len = 28, %% updated-at
