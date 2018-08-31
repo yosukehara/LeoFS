@@ -36,7 +36,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-0.17.3, mkdocs-material-2.7.1">
+      <meta name="generator" content="mkdocs-0.17.5, mkdocs-material-2.7.1">
     
     
       
@@ -766,6 +766,18 @@
 
 
   <li class="md-nav__item">
+    <a href="../../admin/system_admin/leo_manager/" title="LeoManager's Maintenance" class="md-nav__link">
+      LeoManager's Maintenance
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../admin/system_admin/monitoring/" title="System Monitoring" class="md-nav__link">
       System Monitoring
     </a>
@@ -1057,6 +1069,20 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#what-should-i-do-when-many-errors-have-started-to-appear-in-log-files-on-leostorage" title="What should I do when many errors have started to appear in log files on LeoStorage." class="md-nav__link">
+    What should I do when many errors have started to appear in log files on LeoStorage.
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-should-i-do-when-adding-additional-disk-volumes-on-leostorage-and-want-to-use-that-space-for-storing-files-in-leofs" title="What should I do when adding additional disk volumes on LeoStorage and want to use that space for storing files in LeoFS?" class="md-nav__link">
+    What should I do when adding additional disk volumes on LeoStorage and want to use that space for storing files in LeoFS?
+  </a>
+  
+</li>
+      
       
       
       
@@ -1107,30 +1133,11 @@
       <input class="md-toggle md-nav__toggle" data-md-toggle="nav-9" type="checkbox" id="nav-9">
     
     <label class="md-nav__link" for="nav-9">
-      RFCS
+      Issues
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
       <label class="md-nav__title" for="nav-9">
-        RFCS
-      </label>
-      <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
-
-
-  <li class="md-nav__item md-nav__item--nested">
-    
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-9-1" type="checkbox" id="nav-9-1">
-    
-    <label class="md-nav__link" for="nav-9-1">
-      Data Protection
-    </label>
-    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
-      <label class="md-nav__title" for="nav-9-1">
-        Data Protection
+        Issues
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
         
@@ -1141,14 +1148,9 @@
 
 
   <li class="md-nav__item">
-    <a href="../../RFCS/data_protection/ssec/" title="Server Side Object Encryption with Customer-Provided Encryption Keys" class="md-nav__link">
-      Server Side Object Encryption with Customer-Provided Encryption Keys
+    <a href="../../issues/documentation-issues/" title="Documentation Issues" class="md-nav__link">
+      Documentation Issues
     </a>
-  </li>
-
-        
-      </ul>
-    </nav>
   </li>
 
         
@@ -1315,6 +1317,20 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#what-should-i-do-when-many-errors-have-started-to-appear-in-log-files-on-leostorage" title="What should I do when many errors have started to appear in log files on LeoStorage." class="md-nav__link">
+    What should I do when many errors have started to appear in log files on LeoStorage.
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-should-i-do-when-adding-additional-disk-volumes-on-leostorage-and-want-to-use-that-space-for-storing-files-in-leofs" title="What should I do when adding additional disk volumes on LeoStorage and want to use that space for storing files in LeoFS?" class="md-nav__link">
+    What should I do when adding additional disk volumes on LeoStorage and want to use that space for storing files in LeoFS?
+  </a>
+  
+</li>
+      
       
       
       
@@ -1447,9 +1463,45 @@ To decrease the bandwidth and odds timeout could happen, you have two options.</
 </ul>
 <p>Given that the above answers, You would not need to be afraid of using hostnames instead of ip addresses.</p>
 <h2 id="why-doesnt-leofs-adm-respond-to-a-command-like-leofs-adm-status">Why doesn't leofs-adm respond to a command like leofs-adm status?<a class="headerlink" href="#why-doesnt-leofs-adm-respond-to-a-command-like-leofs-adm-status" title="Permanent link">&para;</a></h2>
-<p>The netcat installed on your env is probably the one distributed through netcat-traditional package and unfortunately that doesn't work for leofs-adm which requires netcat-openbsd instead. if that is the case, installing netcat-openbsd should solve the problem as reported on github issue<sup id="fnref:2"><a class="footnote-ref" href="#fn:2" rel="footnote">2</a></sup>.</p>
+<p>The netcat installed on your env is probably the one distributed through <code class="codehilite">netcat-traditional</code> package and unfortunately that doesn't work for leofs-adm which requires <code class="codehilite">netcat-openbsd</code> instead. if that is the case, installing <code class="codehilite">netcat-openbsd</code> should solve the problem as reported on github issue<sup id="fnref:2"><a class="footnote-ref" href="#fn:2" rel="footnote">2</a></sup>.</p>
+<p>Before you execute leofs-adm's commands on Debian 8/9, You need to install and choose <code class="codehilite">netcat-openbsd</code> as follows:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="codehilite"><pre><span></span>$ sudo apt install netcat-openbsd
+
+$ sudo update-alternatives --config nc
+There are <span class="m">2</span> choices <span class="k">for</span> the alternative nc <span class="o">(</span>providing /bin/nc<span class="o">)</span>.
+
+  Selection    Path                 Priority   Status
+------------------------------------------------------------
+* <span class="m">0</span>            /bin/nc.openbsd       <span class="m">50</span>        auto mode
+  <span class="m">1</span>            /bin/nc.openbsd       <span class="m">50</span>        manual mode
+  <span class="m">2</span>            /bin/nc.traditional   <span class="m">10</span>        manual mode
+</pre></div>
+</td></tr></table>
+
 <h2 id="why-doesnt-leofs-adm-import-user-work-even-the-user-doesnt-exist">Why doesn't leofs-adm import-user work even the user doesn't exist?<a class="headerlink" href="#why-doesnt-leofs-adm-import-user-work-even-the-user-doesnt-exist" title="Permanent link">&para;</a></h2>
 <p>If you are using LeoFS &lt;= v1.3.8 then you probably hit the issue<sup id="fnref:3"><a class="footnote-ref" href="#fn:3" rel="footnote">3</a></sup>. If that is the case, we'd recommend you upgrade to the v1.4.0 or higher one in which version you can use import-user with the force update option (-f) that enables you to import the user with the existing access-key-id.</p>
+<h2 id="what-should-i-do-when-many-errors-have-started-to-appear-in-log-files-on-leostorage">What should I do when many errors have started to appear in log files on LeoStorage.<a class="headerlink" href="#what-should-i-do-when-many-errors-have-started-to-appear-in-log-files-on-leostorage" title="Permanent link">&para;</a></h2>
+<p>Some users faced this problem<sup id="fnref:4"><a class="footnote-ref" href="#fn:4" rel="footnote">4</a></sup> with log files filled with following error lines.</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="p">[</span><span class="n">E</span><span class="p">]</span>     <span class="n">node01</span><span class="mf">@10.3.15.101</span>      <span class="mi">2018</span><span class="o">-</span><span class="mo">07</span><span class="o">-</span><span class="mi">26</span> <span class="mi">23</span><span class="o">:</span><span class="mi">36</span><span class="o">:</span><span class="mf">50.863832</span> <span class="o">+</span><span class="mo">0300</span>        <span class="mi">1532637410l</span><span class="nl">eo_storage_handler_object</span><span class="p">:</span><span class="n">get</span><span class="o">/</span><span class="mi">4</span>      <span class="mi">190</span>     <span class="p">[{</span><span class="n">from</span><span class="p">,</span><span class="n">gateway</span><span class="p">},{</span><span class="n">method</span><span class="p">,</span><span class="n">get</span><span class="p">},{</span><span class="n">key</span><span class="p">,</span><span class="o">&lt;&lt;</span><span class="s">&quot;production/promotion/261/1.jpg&quot;</span><span class="o">&gt;&gt;</span><span class="p">},{</span><span class="n">req_id</span><span class="p">,</span><span class="mi">31364649</span><span class="p">},{</span><span class="n">etag</span><span class="p">,</span><span class="mi">18791873666153085349492137587707139197</span><span class="p">},{</span><span class="n">cause</span><span class="p">,</span><span class="n">unavailable</span><span class="p">}]</span>
+</pre></div>
+</td></tr></table>
+
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span>[E] storage_0@chuckwalla.pleiad.uaprom  2018-08-07 17:42:12.196108 +0300    1533652932  leo_storage_handler_object:put/2    389 [{from,gateway},{method,put},{key,&lt;&lt;&quot;uaprom-image/612807456_w200_h200_cid2413932_pid341885190-cb582430.jpg&quot;&gt;&gt;},{req_id,59131282},{cause,unavailable}]
+</pre></div>
+</td></tr></table>
+
+<p>It turns out that this problem can happen in case <code class="codehilite">obj_containers.num_of_containers</code> in leo_storage.conf is set to relatively high number so if you face this problem and <code class="codehilite">obj_containers.num_of_containers</code> is set to relatively high then please try to lower the value like 32, 64. One of our users has succeeded in fixing this problem by changing its value from 384 to 64.</p>
+<h2 id="what-should-i-do-when-adding-additional-disk-volumes-on-leostorage-and-want-to-use-that-space-for-storing-files-in-leofs">What should I do when adding additional disk volumes on LeoStorage and want to use that space for storing files in LeoFS?<a class="headerlink" href="#what-should-i-do-when-adding-additional-disk-volumes-on-leostorage-and-want-to-use-that-space-for-storing-files-in-leofs" title="Permanent link">&para;</a></h2>
+<p>Follow the instruction here<sup id="fnref:5"><a class="footnote-ref" href="#fn:5" rel="footnote">5</a></sup>.</p>
 <div class="footnote">
 <hr />
 <ol>
@@ -1461,6 +1513,12 @@ To decrease the bandwidth and odds timeout could happen, you have two options.</
 </li>
 <li id="fn:3">
 <p><a href="https://github.com/leo-project/leofs/issues/964" target="_blank">LeoFS' Issue #964, import-user with the access-key-id belonging to a deleted user doesn't work</a>&#160;<a class="footnote-backref" href="#fnref:3" rev="footnote" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:4">
+<p><a href="https://github.com/leo-project/leofs/issues/1078#issuecomment-408240731" target="_blank">LeoFS' Issue #1078, Inconsistent RING can happen when rebalancing the cluster</a>&#160;<a class="footnote-backref" href="#fnref:4" rev="footnote" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+<li id="fn:5">
+<p><a href="https://leo-project.net/leofs/docs/admin/system_operations/data/#use-cases" target="_blank">Use Cases - Scale up (Add an additional disk volume on LeoStorage)</a>&#160;<a class="footnote-backref" href="#fnref:5" rev="footnote" title="Jump back to footnote 5 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div>
@@ -1541,7 +1599,7 @@ To decrease the bandwidth and odds timeout could happen, you have two options.</
     
       <script src="../../assets/javascripts/application.8eb9be28.js"></script>
       
-      <script>app.initialize({version:"0.17.3",url:{base:"../.."}})</script>
+      <script>app.initialize({version:"0.17.5",url:{base:"../.."}})</script>
       
     
     

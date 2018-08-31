@@ -1,158 +1,213 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-    
     <url>
      <loc>/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
     <url>
      <loc>/whats_new/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
-        
     <url>
      <loc>/installation/quick/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
      <loc>/installation/cluster/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
-    
-
-    
-        
     <url>
      <loc>/architecture/README/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
      <loc>/architecture/leo_gateway/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
      <loc>/architecture/leo_storage/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
      <loc>/architecture/leo_manager/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
-    
-
-    
-        
     <url>
-     <loc></loc>
-     <lastmod></lastmod>
+     <loc>/admin/setup/planning_for_production/</loc>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc></loc>
-     <lastmod></lastmod>
+     <loc>/admin/setup/supported_platforms/</loc>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc></loc>
-     <lastmod></lastmod>
+     <loc>/admin/setup/hardware_requirements/</loc>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc></loc>
-     <lastmod></lastmod>
+     <loc>/admin/setup/network_config/</loc>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc></loc>
-     <lastmod></lastmod>
+     <loc>/admin/system_admin/load_balancing/</loc>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
+    <url>
+     <loc>/admin/settings/cluster/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/settings/environment_config/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/settings/leo_manager/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/settings/leo_storage/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/settings/leo_gateway/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/protocols/s3/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/protocols/rest/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/protocols/nfs_v3/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_operations/flow/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_operations/systemd/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_operations/s3/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_operations/cluster/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_operations/data/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_operations/multi_dc_replication/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_admin/log_management/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_admin/persistent_configuration/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_admin/leo_manager/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_admin/monitoring/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_admin/migration/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_admin/integration/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>/admin/system_admin/multiple_nodes/</loc>
+     <lastmod>2018-08-31</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
     <url>
      <loc>/admin/index_of_commands/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
-    
-
-    
     <url>
      <loc>/benchmark/README/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
-        
     <url>
      <loc>/faq/fundamentals/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
      <loc>/faq/limits/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
      <loc>/faq/administration/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
      <loc>/faq/client/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
-    
-
-    
     <url>
      <loc>/production_checklist/README/</loc>
-     <lastmod>2018-05-02</lastmod>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
-        
     <url>
-     <loc></loc>
-     <lastmod></lastmod>
+     <loc>/issues/documentation-issues/</loc>
+     <lastmod>2018-08-31</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
-    
-
 </urlset>

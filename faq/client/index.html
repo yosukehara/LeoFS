@@ -36,7 +36,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-0.17.3, mkdocs-material-2.7.1">
+      <meta name="generator" content="mkdocs-0.17.5, mkdocs-material-2.7.1">
     
     
       
@@ -766,6 +766,18 @@
 
 
   <li class="md-nav__item">
+    <a href="../../admin/system_admin/leo_manager/" title="LeoManager's Maintenance" class="md-nav__link">
+      LeoManager's Maintenance
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../admin/system_admin/monitoring/" title="System Monitoring" class="md-nav__link">
       System Monitoring
     </a>
@@ -939,9 +951,36 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#user-defined-metadata" title="User Defined Metadata" class="md-nav__link">
+    User Defined Metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#uploading-objects" title="Uploading Objects" class="md-nav__link">
     Uploading Objects
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cant-read-files-stored-in-leofs-using-s3fs" title="Can't read files stored in LeoFS using s3fs" class="md-nav__link">
+    Can't read files stored in LeoFS using s3fs
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workaround" title="Workaround" class="md-nav__link">
+    Workaround
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -983,30 +1022,11 @@
       <input class="md-toggle md-nav__toggle" data-md-toggle="nav-9" type="checkbox" id="nav-9">
     
     <label class="md-nav__link" for="nav-9">
-      RFCS
+      Issues
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
       <label class="md-nav__title" for="nav-9">
-        RFCS
-      </label>
-      <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
-
-
-  <li class="md-nav__item md-nav__item--nested">
-    
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-9-1" type="checkbox" id="nav-9-1">
-    
-    <label class="md-nav__link" for="nav-9-1">
-      Data Protection
-    </label>
-    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
-      <label class="md-nav__title" for="nav-9-1">
-        Data Protection
+        Issues
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
         
@@ -1017,14 +1037,9 @@
 
 
   <li class="md-nav__item">
-    <a href="../../RFCS/data_protection/ssec/" title="Server Side Object Encryption with Customer-Provided Encryption Keys" class="md-nav__link">
-      Server Side Object Encryption with Customer-Provided Encryption Keys
+    <a href="../../issues/documentation-issues/" title="Documentation Issues" class="md-nav__link">
+      Documentation Issues
     </a>
-  </li>
-
-        
-      </ul>
-    </nav>
   </li>
 
         
@@ -1061,9 +1076,36 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#user-defined-metadata" title="User Defined Metadata" class="md-nav__link">
+    User Defined Metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#uploading-objects" title="Uploading Objects" class="md-nav__link">
     Uploading Objects
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cant-read-files-stored-in-leofs-using-s3fs" title="Can't read files stored in LeoFS using s3fs" class="md-nav__link">
+    Can't read files stored in LeoFS using s3fs
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workaround" title="Workaround" class="md-nav__link">
+    Workaround
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1107,8 +1149,47 @@
 </ul>
 </li>
 </ul>
+<h2 id="user-defined-metadata">User Defined Metadata<a class="headerlink" href="#user-defined-metadata" title="Permanent link">&para;</a></h2>
+<p>Although we support User Defined Metadata according to the original S3 spec, we have reserved every key which prefix is "x-amz-meta-leofs-" as system reserved ones. So please be careful not to use User Defined Metadata with the key prefixed "x-amz-meta-leofs-".</p>
+<ul>
+<li>Related Links:<ul>
+<li><a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html#object-metadata">User Defined Metadata</a></li>
+</ul>
+</li>
+</ul>
 <h2 id="uploading-objects">Uploading Objects<a class="headerlink" href="#uploading-objects" title="Permanent link">&para;</a></h2>
 <p>See <a href="../../admin/settings/leo_gateway/">Administrators / Settings / LeoGateway Settings - Uploading Objects</a></p>
+<h2 id="cant-read-files-stored-in-leofs-using-s3fs">Can't read files stored in LeoFS using s3fs<a class="headerlink" href="#cant-read-files-stored-in-leofs-using-s3fs" title="Permanent link">&para;</a></h2>
+<p>s3fs can make a part request in a different size on each part as described below.</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span>[PUT]   test    test/test.parquet       1       5596007 2018-08-01 14:28:13.217763 +0900        1533101293217754 200     49
+[PUT]   test    test/test.parquet       2       5246231 2018-08-01 14:28:13.378359 +0900        1533101293378348 200     34
+[PUT]   test    test/test.parquet       3       553677  2018-08-01 14:28:13.400117 +0900        1533101293400082 200     7
+</pre></div>
+</td></tr></table>
+
+<p>(The fifth column denotes the size of a body LeoGateway receives.)</p>
+<p>However LeoGateway expects the part size to be same among all parts except the last one so that LeoGateway may fail to calculate the position where to start reading when handling a GET with Range Request. As a result, LeoGateway may respond wrong data to clients and that's the case.</p>
+<h3 id="workaround">Workaround<a class="headerlink" href="#workaround" title="Permanent link">&para;</a></h3>
+<p>There is a init param "default_block_size" which allow library users to specify the threshold over which an object will be sent through multipart upload so setting a enough large value to the param make multipart uploads never happen. The below code is an example to avoid multipart uploads with s3fs.</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="n">boto3_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;endpoint_url&#39;</span><span class="p">:</span><span class="s1">&#39;http://localhost:8080&#39;</span><span class="p">}</span>
+<span class="n">fs</span> <span class="o">=</span> <span class="n">s3fs</span><span class="o">.</span><span class="n">S3FileSystem</span><span class="p">(</span><span class="n">key</span><span class="o">=</span> <span class="n">ACCESS_KEY</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="n">SECRET_ACCESS_KEY</span><span class="p">,</span>
+                       <span class="n">default_block_size</span> <span class="o">=</span> <span class="mi">104857600</span><span class="p">,</span>
+                       <span class="n">client_kwargs</span><span class="o">=</span><span class="n">boto3_dict</span><span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<p>With the above code, you can read/write files which size are less than 100MB with s3fs.</p>
+<ul>
+<li>Related Links:<ul>
+<li><a href="https://github.com/dask/s3fs">s3fs</a></li>
+</ul>
+</li>
+</ul>
                 
                   
                 
@@ -1186,7 +1267,7 @@
     
       <script src="../../assets/javascripts/application.8eb9be28.js"></script>
       
-      <script>app.initialize({version:"0.17.3",url:{base:"../.."}})</script>
+      <script>app.initialize({version:"0.17.5",url:{base:"../.."}})</script>
       
     
     

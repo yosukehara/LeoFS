@@ -36,7 +36,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-0.17.3, mkdocs-material-2.7.1">
+      <meta name="generator" content="mkdocs-0.17.5, mkdocs-material-2.7.1">
     
     
       
@@ -892,6 +892,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#recover-consistency" title="recover-consistency" class="md-nav__link">
+    recover-consistency
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recover-node" title="recover-node" class="md-nav__link">
     recover-node
   </a>
@@ -996,6 +1003,18 @@
   <li class="md-nav__item">
     <a href="../../system_admin/persistent_configuration/" title="Persistent Configuration" class="md-nav__link">
       Persistent Configuration
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../system_admin/leo_manager/" title="LeoManager's Maintenance" class="md-nav__link">
+      LeoManager's Maintenance
     </a>
   </li>
 
@@ -1176,30 +1195,11 @@
       <input class="md-toggle md-nav__toggle" data-md-toggle="nav-9" type="checkbox" id="nav-9">
     
     <label class="md-nav__link" for="nav-9">
-      RFCS
+      Issues
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
       <label class="md-nav__title" for="nav-9">
-        RFCS
-      </label>
-      <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
-
-
-  <li class="md-nav__item md-nav__item--nested">
-    
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-9-1" type="checkbox" id="nav-9-1">
-    
-    <label class="md-nav__link" for="nav-9-1">
-      Data Protection
-    </label>
-    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
-      <label class="md-nav__title" for="nav-9-1">
-        Data Protection
+        Issues
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
         
@@ -1210,14 +1210,9 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../RFCS/data_protection/ssec/" title="Server Side Object Encryption with Customer-Provided Encryption Keys" class="md-nav__link">
-      Server Side Object Encryption with Customer-Provided Encryption Keys
+    <a href="../../../issues/documentation-issues/" title="Documentation Issues" class="md-nav__link">
+      Documentation Issues
     </a>
-  </li>
-
-        
-      </ul>
-    </nav>
   </li>
 
         
@@ -1414,6 +1409,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#recover-consistency" title="recover-consistency" class="md-nav__link">
+    recover-consistency
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recover-node" title="recover-node" class="md-nav__link">
     recover-node
   </a>
@@ -1507,6 +1509,10 @@
 </ul>
 </li>
 </ul>
+<div class="admonition note">
+<p class="admonition-title">Note: How files are distributed across the containers and AVS/KVS pairs?</p>
+<p>It's determined by a simple math, in brief, <code class="codehilite">hash(<span class="cp">${</span><span class="n">filename</span><span class="cp">}</span>) modulo <span class="cp">${</span><span class="n">number_of_avs_kvs_pairs</span><span class="cp">}</span></code> so that being said, LeoFS can't handle PUT/DELETE operations on a container which disk space is full(In other words, LeoFS doesn't take the remained disk space into account when deciding the container for PUT/DELETE operations). If you want to scale up (add an additional disk volume) a specific LeoStorage then you need to follow the instruction here<sup id="fnref:1"><a class="footnote-ref" href="#fn:1" rel="footnote">1</a></sup>.</p>
+</div>
 <h3 id="data-compaction">Data Compaction<a class="headerlink" href="#data-compaction" title="Permanent link">&para;</a></h3>
 <p>This section provides information about what/how data-compaction can affect the online performance.</p>
 <ul>
@@ -1809,8 +1815,12 @@ Offset| RING&#39;s address-id                        | Filename                 
 <td>Recover <strong>RING, a routing table</strong> of the specified node of the local cluster</td>
 </tr>
 <tr>
+<td><code class="codehilite">leofs-adm recover-consistency &lt;storage-node&gt;</code></td>
+<td>Sync all objects in the specified storage-node with other nodes. Since only the specified storage-node tries to sync objects stored in its local storage, the node could become high load while other nodes keep each load almost as-is. This can be used to recover the whole cluster so called <code class="codehilite">Scrub</code> step by step.</td>
+</tr>
+<tr>
 <td><code class="codehilite">leofs-adm recover-node &lt;storage-node&gt;</code></td>
-<td>Recover all inconsistent objects in the specified storage-node.</td>
+<td>Recover all inconsistent objects in the specified storage-node. Since any nodes except the specified one try to sync objects stored in each local storage with the specified one, almost all nodes could become high load. This can be used to recover a specific node as earlier as possible.</td>
 </tr>
 <tr>
 <td><code class="codehilite">leofs-adm recover-cluster &lt;remote-cluster-id&gt;</code></td>
@@ -1858,6 +1868,15 @@ OK
 </pre></div>
 </td></tr></table>
 
+<h4 id="recover-consistency">recover-consistency<a class="headerlink" href="#recover-consistency" title="Permanent link">&para;</a></h4>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">## Example:</span>
+$ leofs-adm recover-consistency storage_0@127.0.0.1
+OK
+</pre></div>
+</td></tr></table>
+
 <h4 id="recover-node">recover-node<a class="headerlink" href="#recover-node" title="Permanent link">&para;</a></h4>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
@@ -1890,8 +1909,7 @@ OK
 </ul>
 </li>
 <li>Queue Broken<ul>
-<li>Invoke <code class="codehilite">recover-node</code> with every node except which having broken Queue files.</li>
-<li>The procedure might be improved in future when <a href="https://github.com/leo-project/leofs/issues/618">issue#618</a> solved.</li>
+<li>Invoke <code class="codehilite">recover-consistency</code> with a node having broken Queue files.</li>
 </ul>
 </li>
 <li>Disk Broken<ul>
@@ -1919,13 +1937,22 @@ OK
 </li>
 <li>Regular Scrub<ul>
 <li>In order to keep data consistent on the eventual consistent system, The regular scrub should be done.</li>
-<li>So we'd recommend users run <code class="codehilite">recover-node</code> regularly while keeping the below cautions in mind,<ul>
-<li>Run <code class="codehilite">recover-node</code> one-by-one at the off-peak time of your system</li>
+<li>So we'd recommend users run <code class="codehilite">recover-consistency</code> regularly while keeping the below cautions in mind,<ul>
+<li>Run <code class="codehilite">recover-consistency</code> one-by-one at the off-peak time of your system</li>
 <li>When some LeoStorage go down during the recover process, just do it over again once the downed nodes come back</li>
 <li>Generally speaking, it depends heavily on the size of your data and the consistency level(W and D) you chose.</li>
-<li>The lower consistency level you choose, The more frequently you should run <code class="codehilite">recover-node</code>.</li>
+<li>The lower consistency level you choose, The more frequently you should run <code class="codehilite">recover-consistency</code>.</li>
 </ul>
 </li>
+</ul>
+</li>
+<li>Scale up (Add an additional disk volume on LeoStorage)<ul>
+<li>Suspend and Stop LeoStorage with <code class="codehilite">leofs-adm suspend</code> and <code class="codehilite">leo_storage stop</code></li>
+<li>Add an addtional disk volume on the node</li>
+<li>Modify leo_storage.conf to append the new disk volume into <code class="codehilite">obj_containers.path</code> and also add the number of the containers into <code class="codehilite">obj_containers.num_of_containers</code>. <em>(The number of items of <code class="codehilite">obj_containers.path</code> and <code class="codehilite">obj_containers.num_of_containers</code> should be same.)</em></li>
+<li>Wipe out all files/directories in all containers on the node</li>
+<li>Start and Resume LeoStorage with <code class="codehilite">leo_storage start</code> and <code class="codehilite">leofs-adm resume</code></li>
+<li>Invoke <code class="codehilite">recover-node</code> with the node to ingest assigned files from other LeoStorages into a new disk layout specified by <code class="codehilite">obj_containers.path</code> and <code class="codehilite">obj_containers.num_of_containers</code></li>
 </ul>
 </li>
 </ul>
@@ -1933,6 +1960,14 @@ OK
 <ul>
 <li><a href="../../../architecture/leo_storage/">Concept and Architecture / LeoStorage's Architecture</a></li>
 </ul>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p><a href="https://leo-project.net/leofs/docs/admin/system_operations/data/#use-cases" target="_blank">Use Cases - Scale up (Add an additional disk volume on LeoStorage)</a>&#160;<a class="footnote-backref" href="#fnref:1" rev="footnote" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
                 
                   
                 
@@ -2010,7 +2045,7 @@ OK
     
       <script src="../../../assets/javascripts/application.8eb9be28.js"></script>
       
-      <script>app.initialize({version:"0.17.3",url:{base:"../../.."}})</script>
+      <script>app.initialize({version:"0.17.5",url:{base:"../../.."}})</script>
       
     
     
